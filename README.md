@@ -2,3 +2,6 @@
 Tölvusamskipti verkefni 3, the botnet rises.
 
 Er að prufa þetta git push.
+
+
+Enn og aftur að prufa.
