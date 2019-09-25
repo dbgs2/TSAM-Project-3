@@ -21,12 +21,14 @@
 #include <map>
 #include <vector>
 
+
 #include <iostream>
 #include <sstream>
 #include <thread>
 #include <map>
 
-#define BACKLOG  5          // Allowed length of queue of waiting connections
+// Allowed length of queue of waiting connections
+#define BACKLOG  5          
 
 // Simple class for handling connections from clients.
 //
@@ -49,7 +51,13 @@ class Client
 // Quite often a simple array can be used as a lookup table, 
 // (indexed on socket no.) sacrificing memory for speed.
 
-std::map<int, Client*> clients; // Lookup table for per Client information
+// Lookup table for per Client information
+std::map<int, Client*> clients;
+
+
+std::map<int, std::string> clientMsg;
+
+
 
 // Open socket for specified port.
 //
@@ -140,6 +148,25 @@ int clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   {
      clients[clientSocket]->name = tokens[1];
   }
+  // WORKING ON THIS NOW
+  else if((tokens[0].compare("SENDMSG") == 0) && (tokens.size() == 3))
+  {
+      std::cout << "token 1" << tokens[1] << std::endl;
+      std::cout << "token 2" << tokens[2] << std::endl;
+      clientMsg.insert(std::pair<int,std::string>(std::stoi(tokens[1]),tokens[2]));
+      printf("Geting msg in now\n");
+
+  }
+  else if((tokens[0].compare("GETMSG") == 0) && (tokens.size() == 2))
+  {
+      //std::string msgsend = clientMsg.begin()->second;
+
+      std::string msgsend = clientMsg.find(std::stoi(tokens[1]))->second;
+
+      send(clientSocket, msgsend.c_str(), msgsend.length()-1, 0);
+      printf("Geting msg in now\n");
+
+  }
   else if(tokens[0].compare("LEAVE") == 0)
   {
       // Close the socket, and leave the socket handling
@@ -198,7 +225,7 @@ int clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
       std::cout << "Unknown command from client:" << buffer << std::endl;
   }
 
-     
+  return 0;
 }
 
 int main(int argc, char* argv[])

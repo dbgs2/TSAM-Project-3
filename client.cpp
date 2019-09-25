@@ -98,6 +98,7 @@ int main(int argc, char* argv[])
        exit(0);
    }
 
+
     // Listen and print replies from server
    std::thread serverThread(listenServer, serverSocket);
 
