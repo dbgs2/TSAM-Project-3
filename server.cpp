@@ -1,10 +1,3 @@
-//
-// Simple chat server for TSAM-409
-//
-// Command line: ./chat_server 4000
-//
-// Author: Jacky Mallett (jacky@ru.is)
-//
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -55,7 +48,19 @@ public:
     std::string host_ip;
     std::string port;
 
-    Server(int socket) : sock(socket) {}
+    //Server(int socket) : sock(socket) {}
+
+    //public: 
+    
+    Server(int socket, const char* group, char* host, char* port_n) //: sock(socket), group_id(group), host_ip(host), port(port_n)
+    {
+        
+        sock = socket;
+        group_id = group_id;
+        host_ip = host_ip;
+        port = port;
+        
+    }
 
     ~Server() {} // Virtual destructor defined for base class
 };
@@ -146,6 +151,28 @@ void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
     FD_CLR(clientSocket, openSockets);
 }
 
+void closeServer(int serverSocket, fd_set *openSockets, int *maxfds)
+{
+    // Remove client from the clients list
+    servers.erase(serverSocket);
+
+    // If this client's socket is maxfds then the next lowest
+    // one has to be determined. Socket fd's can be reused by the Kernel,
+    // so there aren't any nice ways to do this.
+
+    if (*maxfds == serverSocket)
+    {
+        for (auto const &p : servers)
+        {
+            *maxfds = std::max(*maxfds, p.second->sock);
+        }
+    }
+
+    // And remove from the list of open sockets.
+
+    FD_CLR(serverSocket, openSockets);
+}
+
 void connectToServer(const char *dst_ip, const char *dst_port)
 {
     struct addrinfo hints, *svr;
@@ -181,6 +208,8 @@ void connectToServer(const char *dst_ip, const char *dst_port)
     }
 }
 
+// Split up buffer into tokens, use the delimiter ','
+// removes \n if in ned of tokens.
 std::vector<std::string> getTokens(char *buffer)
 {
     std::vector<std::string> tokens;
@@ -245,23 +274,49 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
     // SERVER COMMANDS
     if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 3)) // was 2
     {
-        clients[serverSocket]->name = tokens[1];
+        servers[serverSocket]->group_id = tokens[1];
         connectToServer(tokens[1].c_str(), tokens[2].c_str());
     }
+    // Leave with no parameters allowed at all ?
+    /*
     else if (tokens[0].compare("LEAVE") == 0)
     {
         // Close the socket, and leave the socket handling
         // code to deal with tidying up clients etc. when
         // select() detects the OS has torn down the connection.
 
-        closeClient(serverSocket, openSockets, maxfds);
+        closeServer(serverSocket, openSockets, maxfds);
     }
+    */
+    // LEAVE,SERVER IP,PORT
     else if ((tokens[0].compare("LEAVE") == 0) && (tokens.size() == 3))
     {
+
+        for (auto i = servers.begin(); i != servers.end(); i++)
+        {
+            std::cout << "IP: " << tokens[1] << " PORT: " << tokens[2] << std::endl;
+            std::cout << "IP: " << i->second->host_ip << " PORT: " << i->second->port << std::endl;
+            if ((tokens[1].compare(i->second->host_ip) == 0)  &&  (tokens[2].compare(i->second->port) == 0))
+            {
+                // found ip and port match.
+                std::cout << "Found the ip and port match" << std::endl;
+                closeServer(serverSocket, openSockets, maxfds);
+                break;
+            }
+            else
+            {
+                /* code */
+                std::string msg = "No match for ip: " + tokens[1] + " and port: " + tokens[2] + "\n";
+                send(serverSocket, msg.c_str(), msg.length(), 0);
+            }
+            
+        }
+
+        //servers.find();
+
         // Close the socket, and leave the socket handling
         // code to deal with tidying up clients etc. when
         // select() detects the OS has torn down the connection.
-
         closeClient(serverSocket, openSockets, maxfds);
     }
     else if (tokens[0].compare("WHO") == 0)
@@ -322,8 +377,8 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
 int main(int argc, char *argv[])
 {
     bool finished;
-    int listenSockClient;       // Socket for connections to server
-    int listenSockServer;       // Socket for connections to server
+    int listenSockClient; // Socket for connections to server
+    int listenSockServer; // Socket for connections to server
     int clientSock;       // Socket of connecting client
     int serverSock;       // Socket of connecting client
     fd_set openSockets;   // Current open sockets
@@ -357,7 +412,6 @@ int main(int argc, char *argv[])
         maxfds = listenSockServer;
     }
 
-
     // WORK IN PROGRESS HERE FOR SEPERATE TCP CLIENT ONLY
     listenSockClient;
     listenSockClient = open_socket(atoi("4242"));
@@ -373,9 +427,6 @@ int main(int argc, char *argv[])
         FD_SET(listenSockClient, &openSockets);
         maxfds = listenSockClient; //??
     }
-
-    
-
 
     finished = false;
 
@@ -408,7 +459,19 @@ int main(int argc, char *argv[])
                 maxfds = std::max(maxfds, serverSock);
 
                 // create a new client to store information.
-                servers[serverSock] = new Server(serverSock);
+                //servers[serverSock] = new Server(serverSock);
+
+                const char* group = "V_GROUP_42";
+                char* ip = argv[1];
+                char* port = argv[2];
+            
+
+                servers[serverSock] = new Server(
+                    serverSock,
+                    group,
+                    ip,
+                    port
+                );
 
                 // Decrement the number of sockets waiting to be dealt with
                 n--;
@@ -416,7 +479,7 @@ int main(int argc, char *argv[])
                 printf("Server connected to server: %d\n", serverSock);
             }
 
-            if(FD_ISSET(listenSockClient, &readSockets))
+            if (FD_ISSET(listenSockClient, &readSockets))
             {
                 clientSock = accept(listenSockClient, (struct sockaddr *)&client, &clientLen);
 
