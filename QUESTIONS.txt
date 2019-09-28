@@ -1,13 +1,23 @@
 *How can we find out the group name of the server we connect to or that are connecting to us ?
+Við þurfum (nemendur) að koma okkur saman um það, í fyrra var eitthvað connect(ip,port,groupe ect)
 
 *Are we dinamicly connecting to servers and constantly changing between them and only sending msg by 1 hop. 
 or are we expected to send a msg along a route ? if so do we need to have some sort of routing table ?
+Einfaldast að manually tengjast við aðra servers, en fínt að hafa eh sem passar að maður sé tengdur við amk 2.
+
+A: Ef ég fæ message sem er ekki ætlað mér, þá á ég að koma því áfram á 1-hop ef það er ekki ætlað þeim, ef það er ætlað einum af þeim þá sendi ég það bara á þann eina.
+Til að það lifi ekki að eilífu þá þarf að hafa TTL á því  (þurfum að fatta það , ekki í lýsingunni)
+
 
 *Listservers, and servers in Server commands are they interrelated ? as in other servers can send the command 
 LISTSERVERS,<FROM_GROUP_ID> and our server responds with sending a msg back with the command SERVERS? Or can 
 all servers send both commands seperately?
+Serverinn sem svarar list servers sendir alltaf 1-hop servera sem eru tengdir honum, með Servers svarinu.
+
 
 *STATUSREQ,FROM GROUP and STATUSRESP,FROM GROUP,TO GROUP,<server, msgs held> also interrelated ? 
+já það er líka svona ping, pong
 
 
 *KEEPALIVE, do we send keepalive on zero msg awaiting ?
+keep alive er heartbeat, segja að hann sé enn uppi. 0-N message, loka á tengingar sem eru ekki lifandi.
