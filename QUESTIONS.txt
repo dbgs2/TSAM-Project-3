@@ -1,0 +1,13 @@
+*How can we find out the group name of the server we connect to or that are connecting to us ?
+
+*Are we dinamicly connecting to servers and constantly changing between them and only sending msg by 1 hop. 
+or are we expected to send a msg along a route ? if so do we need to have some sort of routing table ?
+
+*Listservers, and servers in Server commands are they interrelated ? as in other servers can send the command 
+LISTSERVERS,<FROM_GROUP_ID> and our server responds with sending a msg back with the command SERVERS? Or can 
+all servers send both commands seperately?
+
+*STATUSREQ,FROM GROUP and STATUSRESP,FROM GROUP,TO GROUP,<server, msgs held> also interrelated ? 
+
+
+*KEEPALIVE, do we send keepalive on zero msg awaiting ?

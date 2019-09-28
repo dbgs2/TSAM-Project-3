@@ -252,9 +252,9 @@ int clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buff
     else if (tokens[0].compare("LISTSERVERS") == 0)
     {
         std::string msg;
-        for (auto const &names : clients)
+        for (auto const &s : servers)
         {
-            msg += "IP: " + names.second->name + ",";
+            msg += "Group name: " + s.second->group_id +  " IP: " + s.second->host_ip + " PORT: " + s.second->port +  ";";
         }
         send(clientSocket, msg.c_str(), msg.length(), 0);
     }
@@ -460,21 +460,17 @@ int main(int argc, char *argv[])
                 maxfds = std::max(maxfds, serverSock);
 
                 // create a new client to store information.
-                servers[serverSock] = new Server(serverSock);
+                Server* s = new Server(serverSock);
 
-                /*
-                const char* group = "V_GROUP_42";
-                char* ip = argv[1];
-                char* port = argv[2];
-            
+                s->group_id = "_GROUP_X";
+                s->host_ip = inet_ntoa(client.sin_addr);
+                s->port = client.sin_port;                
+                servers[serverSock] = s;
+                
 
-                servers[serverSock] = new Server(
-                    serverSock,
-                    group,
-                    ip,
-                    port
-                );
-                */
+
+
+
 
                 // Decrement the number of sockets waiting to be dealt with
                 n--;
