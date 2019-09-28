@@ -48,10 +48,10 @@ public:
     std::string host_ip;
     std::string port;
 
-    //Server(int socket) : sock(socket) {}
+    Server(int socket) : sock(socket) {}
 
     //public: 
-    
+    /*
     Server(int socket, const char* group, char* host, char* port_n) //: sock(socket), group_id(group), host_ip(host), port(port_n)
     {
         
@@ -61,6 +61,7 @@ public:
         port = port;
         
     }
+    */
 
     ~Server() {} // Virtual destructor defined for base class
 };
@@ -459,8 +460,9 @@ int main(int argc, char *argv[])
                 maxfds = std::max(maxfds, serverSock);
 
                 // create a new client to store information.
-                //servers[serverSock] = new Server(serverSock);
+                servers[serverSock] = new Server(serverSock);
 
+                /*
                 const char* group = "V_GROUP_42";
                 char* ip = argv[1];
                 char* port = argv[2];
@@ -472,6 +474,7 @@ int main(int argc, char *argv[])
                     ip,
                     port
                 );
+                */
 
                 // Decrement the number of sockets waiting to be dealt with
                 n--;
