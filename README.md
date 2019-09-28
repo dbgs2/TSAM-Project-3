@@ -1,7 +1,11 @@
 # TSAM-Project-3
-Tölvusamskipti verkefni 3, the botnet rises.
 
-Er að prufa þetta git push.
+## Usage
 
+Ip:
+```./ip```
+Server:
+```./client <ip> <port>```
 
-Enn og aftur að prufa.
+Client:
+```./server <port>```
