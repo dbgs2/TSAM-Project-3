@@ -22,13 +22,9 @@
 // Allowed length of queue of waiting connections
 #define BACKLOG 5
 
-// OUR GROUP ID
-#define OUR_GROUP "V_GROUP_42"
-
 // Simple class for handling connections from clients.
 //
 // Client(int socket) - socket to send/receive traffic from client.
-
 class Client
 {
 public:
@@ -40,40 +36,23 @@ public:
     ~Client() {} // Virtual destructor defined for base class
 };
 
+// Simple class for handling connections from servers.
+//
+// Server(int socket) - socket to send/receive traffic from client.
 class Server
 {
 public:
     int sock;
-    std::string group_id;
-    std::string host_ip;
+    std::string name;
+    std::string ip;
     std::string port;
 
     Server(int socket) : sock(socket) {}
 
-    //public: 
-    /*
-    Server(int socket, const char* group, char* host, char* port_n) //: sock(socket), group_id(group), host_ip(host), port(port_n)
-    {
-        
-        sock = socket;
-        group_id = group_id;
-        host_ip = host_ip;
-        port = port;
-        
-    }
-    */
-
     ~Server() {} // Virtual destructor defined for base class
 };
 
-// Note: map is not necessarily the most efficient method to use here,
-// especially for a server with large numbers of simulataneous connections,
-// where performance is also expected to be an issue.
-//
-// Quite often a simple array can be used as a lookup table,
-// (indexed on socket no.) sacrificing memory for speed.
-
-// Lookup table for per Client information
+// Lookup tables for per Client or Server information
 std::map<int, Client *> clients;
 std::map<int, Server *> servers;
 
@@ -84,7 +63,6 @@ std::multimap<std::string, std::string> clientMsg;
 // Open socket for specified port.
 //
 // Returns -1 if unable to create the socket for any reason.
-
 int open_socket(int portno)
 {
     struct sockaddr_in sk_addr; // address settings for bind()
@@ -126,9 +104,6 @@ int open_socket(int portno)
         return (sock);
     }
 }
-
-// Close a client's connection, remove it from the client list, and
-// tidy up select sockets afterwards.
 
 void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
 {
@@ -174,13 +149,13 @@ void closeServer(int serverSocket, fd_set *openSockets, int *maxfds)
     FD_CLR(serverSocket, openSockets);
 }
 
-void connectToServer(const char *dst_ip, const char *dst_port)
+void connectToServer(const char *dst_groupname, const char *dst_ip, const char *dst_port)
 {
     struct addrinfo hints, *svr;
     int serverSocket;
     int set = 1;
 
-    hints.ai_family = AF_INET; // IPv4 only addresses
+    hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
@@ -192,7 +167,6 @@ void connectToServer(const char *dst_ip, const char *dst_port)
         exit(0);
     }
 
-    // 1 socket for each connection ? or reuse it ???
     serverSocket = socket(svr->ai_family, svr->ai_socktype, svr->ai_protocol);
 
     if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &set, sizeof(set)) < 0)
@@ -207,10 +181,31 @@ void connectToServer(const char *dst_ip, const char *dst_port)
         perror("Connect failed: ");
         exit(0);
     }
+
+    servers[serverSocket] = new Server(serverSocket);
+    servers[serverSocket]->name = dst_groupname;
+    servers[serverSocket]->ip = dst_ip;
+    servers[serverSocket]->port = dst_port;
+
+    // TODO MAKE THIS DYNAMIC
+    //std::string server_name = "V_GROUP_42";
+    //std::string server_ip = "192.168.100.222";
+    //std::string server_port = "4042";
+    //std::string msg = "CONNECT," + server_name + "," + server_ip + "," + server_port;
+    std::string msg = "CONNECT,V_GROUP_42,192.168.100.222,4042";
+
+    if (send(serverSocket, msg.c_str(), msg.length(), 0) < 0)
+    {
+        printf("Failed to send connect msg to server: %s\n", dst_ip);
+        perror("Connect failed: ");
+        exit(0);
+    }
 }
 
 // Split up buffer into tokens, use the delimiter ','
 // removes \n if in ned of tokens.
+//
+// Returns vector with all tokens.
 std::vector<std::string> getTokens(char *buffer)
 {
     std::vector<std::string> tokens;
@@ -249,12 +244,20 @@ int clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buff
 
         send(clientSocket, msg.c_str(), msg.length() - 1, 0);
     }
+    else if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 4))
+    {
+        connectToServer(tokens[1].c_str(), tokens[2].c_str(), tokens[3].c_str());
+    }
+    else if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() != 4))
+    {
+        std::string msg = "Parameters not right, use this format: CONNECT,IP,PORT \n";
+    }
     else if (tokens[0].compare("LISTSERVERS") == 0)
     {
-        std::string msg;
+        std::string msg = "SERVERS,";
         for (auto const &s : servers)
         {
-            msg += "Group name: " + s.second->group_id +  " IP: " + s.second->host_ip + " PORT: " + s.second->port +  ";";
+            msg += s.second->name + "," + s.second->ip + "," + s.second->port + ";";
         }
         send(clientSocket, msg.c_str(), msg.length(), 0);
     }
@@ -266,18 +269,30 @@ int clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buff
     return 0;
 }
 
+// Process command from server to server
 int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buffer)
 {
     std::vector<std::string> tokens;
 
     tokens = getTokens(buffer);
 
-    // SERVER COMMANDS
-    if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 3)) // was 2
+    // CONNECT,Group_Name,IP_addr,Port_num;
+    if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 4)) // was 2
     {
-        servers[serverSocket]->group_id = tokens[1];
-        connectToServer(tokens[1].c_str(), tokens[2].c_str());
+        servers[serverSocket]->name = tokens[1];
+        servers[serverSocket]->ip = tokens[2];
+        servers[serverSocket]->port = tokens[3];
+
+        std::string msg = "Connection successful TODO this msg";
+        std::cout << msg << std::endl;
+        send(serverSocket, msg.c_str(), msg.length(), 0);
     }
+    else if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() != 4))
+    {
+        std::string msg = "Parameters not right, use this format: CONNECT,GROUP_ID,IP,PORT \n";
+        send(serverSocket, msg.c_str(), msg.length(), 0);
+    }
+
     // Leave with no parameters allowed at all ?
     /*
     else if (tokens[0].compare("LEAVE") == 0)
@@ -296,8 +311,8 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
         for (auto i = servers.begin(); i != servers.end(); i++)
         {
             std::cout << "IP: " << tokens[1] << " PORT: " << tokens[2] << std::endl;
-            std::cout << "IP: " << i->second->host_ip << " PORT: " << i->second->port << std::endl;
-            if ((tokens[1].compare(i->second->host_ip) == 0)  &&  (tokens[2].compare(i->second->port) == 0))
+            std::cout << "IP: " << i->second->ip << " PORT: " << i->second->port << std::endl;
+            if ((tokens[1].compare(i->second->ip) == 0) && (tokens[2].compare(i->second->port) == 0))
             {
                 // found ip and port match.
                 std::cout << "Found the ip and port match" << std::endl;
@@ -310,10 +325,7 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
                 std::string msg = "No match for ip: " + tokens[1] + " and port: " + tokens[2] + "\n";
                 send(serverSocket, msg.c_str(), msg.length(), 0);
             }
-            
         }
-
-        //servers.find();
 
         // Close the socket, and leave the socket handling
         // code to deal with tidying up clients etc. when
@@ -397,7 +409,6 @@ int main(int argc, char *argv[])
     }
 
     // Setup socket for server to listen to
-
     listenSockServer = open_socket(atoi(argv[1]));
     printf("Listening on port: %d\n", listenSockServer); // Currently printing out socket, not port as it says it is.
 
@@ -414,8 +425,14 @@ int main(int argc, char *argv[])
     }
 
     // WORK IN PROGRESS HERE FOR SEPERATE TCP CLIENT ONLY
+    int client_sock = 4242;
     listenSockClient;
-    listenSockClient = open_socket(atoi("4242"));
+    // doing this so I can easily run multiple servers, eventually we only
+    // run 1 server so this can be static if needed.
+    std::cout << "enter client sock standard is 4242: ";
+    std::cin >> client_sock;
+
+    listenSockClient = open_socket(client_sock);
 
     if (listen(listenSockClient, BACKLOG) < 0)
     {
@@ -426,7 +443,7 @@ int main(int argc, char *argv[])
     // Add listen socket to socket set we are monitoring
     {
         FD_SET(listenSockClient, &openSockets);
-        maxfds = listenSockClient; //??
+        maxfds = listenSockClient;
     }
 
     finished = false;
@@ -460,17 +477,7 @@ int main(int argc, char *argv[])
                 maxfds = std::max(maxfds, serverSock);
 
                 // create a new client to store information.
-                Server* s = new Server(serverSock);
-
-                s->group_id = "_GROUP_X";
-                s->host_ip = inet_ntoa(client.sin_addr);
-                s->port = client.sin_port;                
-                servers[serverSock] = s;
-                
-
-
-
-
+                servers[serverSock] = new Server(serverSock);
 
                 // Decrement the number of sockets waiting to be dealt with
                 n--;
