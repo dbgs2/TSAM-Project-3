@@ -282,11 +282,8 @@ void listReqToServer(const char *dst_groupname)
 // Goes over each connected server and adds them to a string
 //
 // returns a string, SERVERS,GROUP_ID,SERVER_IP,SERVER_PORT;GROUP_ID,SERVER_IP,SERVER_PORT;
-std::string listServers(int serverSock)
+std::string listServers()
 {
-
-    //Server *con_server = servers.at(serverSock);
-
 
     std::string servers_list = "SERVERS," + server_name+ "," + server_ip + "," + server_port + ";";
     for (auto const &s : servers)
@@ -370,14 +367,15 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
     if ((tokens[0].compare("LISTSERVERS") == 0) && (tokens.size() == 2))
     {
 
-        std::string servers_list = listServers(serverSocket);
+        std::string servers_list = listServers();
         send(serverSocket, servers_list.c_str(), servers_list.length(), 0);
     }
     // SERVERS
     // e.g. SERVERS,V GROUP 1,130.208.243.61,8888;V GROUP 2,10.2.132.12,888;
     else if (tokens[0].compare("SERVERS") == 0)
     {
-        /* code */
+        std::string servers_list = listServers();
+        send(serverSocket, servers_list.c_str(), servers_list.length(), 0);
     }
     // KEEPALIVE,<No. of Messages>
     else if ((tokens[0].compare("KEEPALIVE") == 0) && (tokens.size() == 2))
