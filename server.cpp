@@ -330,7 +330,9 @@ int clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buff
 
         for (auto const &m : clientMsg)
         {
-            msg += m.second + ",";
+            if(m.first == tokens[1]){
+                msg += m.second + ",";
+            } 
         }
 
         send(clientSocket, msg.c_str(), msg.length() - 1, 0);
@@ -385,10 +387,23 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
     // GET_MSG,<GROUP ID>
     else if ((tokens[0].compare("GET_MSG") == 0) && (tokens.size() == 2))
     {
-        /* code */
+        std::string msg;
+        clientMsg.insert(std::pair<std::string, std::string>("11", "bla1"));
+        clientMsg.insert(std::pair<std::string, std::string>("11", "bla2"));
+        clientMsg.insert(std::pair<std::string, std::string>("12", "bla3"));
+        clientMsg.insert(std::pair<std::string, std::string>("12", "bla4"));
+
+        for (auto const &m : clientMsg)
+        {   
+            if(m.first == tokens[1]){
+                msg += m.second + ",";
+            } 
+        }
+
+        send(serverSocket, msg.c_str(), msg.length() - 1, 0);
     }
     // SEND MSG,<FROM GROUP ID>,<TO GROUP ID>,<Message content>
-    else if ((tokens[0].compare("GET_MSG") == 0) && (tokens.size() == 4))
+    else if ((tokens[0].compare("SEND_MSG") == 0) && (tokens.size() == 4))
     {
         /* code */
     }

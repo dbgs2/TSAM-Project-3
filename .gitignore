@@ -4,3 +4,6 @@
 !*.md
 !Makefile
 !.gitignore
+ip
+client
+server
