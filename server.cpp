@@ -333,7 +333,9 @@ int clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buff
 
         for (auto const &m : clientMsg)
         {
-            msg += m.second + ",";
+            if(m.first == tokens[1]){
+                msg += m.second + ",";
+            } 
         }
 
         send(clientSocket, msg.c_str(), msg.length() - 1, 0);
