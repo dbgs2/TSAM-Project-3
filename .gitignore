@@ -1,4 +1,6 @@
+*
 !*.cpp
 !*.txt
 !*.md
 !Makefile
+!.gitignore
