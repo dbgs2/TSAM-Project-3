@@ -1,0 +1,4 @@
+!*.cpp
+!*.txt
+!*.md
+!Makefile
