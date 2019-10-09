@@ -215,6 +215,21 @@ void closeServer(int serverSocket, fd_set *openSockets, int *maxfds)
     FD_CLR(serverSocket, openSockets);
 }
 
+bool sendToServer(int socket, std::string msg)
+{
+    std::string SOH = "\1";
+    std::string EOT = "\4";
+    std::string msg2 = SOH + msg + EOT;
+
+    if ((send(socket, msg2.c_str(), msg2.length(), 0)) < 0)
+    {
+        perror("Send failed: ");
+        return 0;
+    }
+
+    return 1;
+}
+
 // Connects to another server
 //
 // Returns false if unable to connect to server for any reason.
@@ -264,11 +279,8 @@ bool connectToServer(const char *dst_groupname, const char *dst_ip, const char *
 
     std::string msg = "LISTSERVERS," + server_name;
 
-    if (send(serverSocket, msg.c_str(), msg.length(), 0) < 0)
+    if ((sendToServer(serverSocket, msg)) == 0)
     {
-        printf("Failed to send connect msg to server: %s\n", dst_ip);
-        perror("Connect failed: ");
-        //exit(0);
         return 0;
     }
 
@@ -332,8 +344,8 @@ int clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buff
                 msg += m.second + ",";
             }
         }
-
-        send(clientSocket, msg.c_str(), msg.length() - 1, 0);
+        sendToServer(clientSocket, msg);
+        //send(clientSocket, msg.c_str(), msg.length() - 1, 0);
     }
     else if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 4))
     {
@@ -341,12 +353,14 @@ int clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buff
         if (connectToServer(tokens[1].c_str(), tokens[2].c_str(), tokens[3].c_str(), openSockets, maxfds))
         {
             std::string msg = "Connection to server successful";
-            send(clientSocket, msg.c_str(), msg.length(), 0);
+            sendToServer(clientSocket, msg);
+            //send(clientSocket, msg.c_str(), msg.length(), 0);
         }
         else
         {
             std::string msg = "Connection to server failed";
-            send(clientSocket, msg.c_str(), msg.length(), 0);
+            sendToServer(clientSocket, msg);
+            //send(clientSocket, msg.c_str(), msg.length(), 0);
         }
     }
     else if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() != 4))
@@ -359,23 +373,12 @@ int clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buff
         for (auto const &m : servers)
         {
             std::string servers_list = listServers();
-            send(m.second->sock, servers_list.c_str(), servers_list.length(), 0);
+            sendToServer(clientSocket, servers_list);
+            //send(m.second->sock, servers_list.c_str(), servers_list.length(), 0);
         }
     }
     else if (tokens[0].compare("TEST") == 0)
     {
-        std::string msg = "LISTSERVERS," + server_name;
-
-        for (auto const &m : servers)
-        {
-
-            if (send(m.second->sock, msg.c_str(), msg.length(), 0) < 0)
-            {
-                printf("Failed to send connect msg to server: %s\n", m.second->ip);
-                perror("Connect failed: ");
-                exit(0);
-            }
-        }
     }
 
     else
@@ -397,7 +400,8 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
     {
         std::cout << "Executing command LISTSERVERS" << std::endl;
         std::string servers_list = listServers();
-        send(serverSocket, servers_list.c_str(), servers_list.length(), 0);
+        sendToServer(serverSocket, servers_list);
+        //send(serverSocket, servers_list.c_str(), servers_list.length(), 0);
     }
     // SERVERS
     // e.g. SERVERS,V GROUP 1,130.208.243.61,8888;V GROUP 2,10.2.132.12,888;
@@ -411,23 +415,38 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
         //std::vector<std::string> tokens;
         //char *buf = tokens.;
 
-        /*
         tokens = getTokens(buffer, ';');
-        char * te;
+        tokens.erase(tokens.begin());
+        char *te;
         std::vector<std::string> tmp;
-        for(auto &t: tokens){
+        for (auto &t : tokens)
+        {
             //memset();
             std::cout << t << std::endl;
-            
-            
-            strcpy(te, t.c_str());
+
+            te = &t[0];
+
             tmp = getTokens(te, ',');
+
+            std::cout << "Executing command CONNECT" << std::endl;
+            if (connectToServer(tmp[0].c_str(), tmp[1].c_str(), tmp[2].c_str(), openSockets, maxfds))
+            {
+                std::string msg = "Connection to server successful";
+                sendToServer(serverSocket, msg);
+                //send(serverSocket, msg.c_str(), msg.length(), 0);
+            }
+            else
+            {
+                std::string msg = "Connection to server failed";
+                sendToServer(serverSocket, msg);
+                //send(serverSocket, msg.c_str(), msg.length(), 0);
+            }
+
             for (auto &e : tmp)
             {
                 std::cout << e << std::endl;
             }
-            
-        }*/
+        }
 
         std::cout << "got servers thingie" << std::endl;
     }
@@ -448,8 +467,8 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
                 msg += m.second + ",";
             }
         }
-
-        send(serverSocket, msg.c_str(), msg.length() - 1, 0);
+        sendToServer(serverSocket, msg);
+        //send(serverSocket, msg.c_str(), msg.length() - 1, 0);
     }
     // SEND MSG,<FROM GROUP ID>,<TO GROUP ID>,<Message content>
     else if ((tokens[0].compare("SEND_MSG") == 0) && (tokens.size() == 4))
@@ -493,16 +512,16 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
 int main(int argc, char *argv[])
 {
     bool finished;
-    int listenSockServer;           // Socket for connections to server
-    int listenSockClient;           // Socket for connections to client
-    int sock;                       // Socket of connecting client
-    fd_set openSockets;             // Current open sockets
-    fd_set readSockets;             // Socket list for select()
-    fd_set exceptSockets;           // Exception socket list
-    int maxfds;                     // Passed to select() as max fd in set
+    int listenSockServer; // Socket for connections to server
+    int listenSockClient; // Socket for connections to client
+    int sock;             // Socket of connecting client
+    fd_set openSockets;   // Current open sockets
+    fd_set readSockets;   // Socket list for select()
+    fd_set exceptSockets; // Exception socket list
+    int maxfds;           // Passed to select() as max fd in set
     struct sockaddr_in adddr_in;
     socklen_t adddr_in_len;
-    char buffer[BUF_MAX];           // buffer for reading from clients
+    char buffer[BUF_MAX]; // buffer for reading from clients
 
     if (argc != 2)
     {
@@ -518,9 +537,7 @@ int main(int argc, char *argv[])
 
     // Setup socket for server to listen to
     listenSockServer = open_socket(atoi(argv[1]));
-    printf("Listening on port: %d\n", listenSockServer);
-
-    
+    //printf("Listening on port: %d\n", listenSockServer);
 
     if (listen(listenSockServer, 1) < 0) // BACKLOG
     {
@@ -539,7 +556,7 @@ int main(int argc, char *argv[])
     std::string clientPort;
     std::cin >> clientPort;
     listenSockClient = open_socket(atoi(clientPort.c_str()));
-    printf("Listening on port: %d\n", listenSockClient);
+    //printf("Listening on port: %d\n", listenSockClient);
 
     if (listen(listenSockClient, 1) < 0)
     {
@@ -631,7 +648,23 @@ int main(int argc, char *argv[])
                         else
                         {
                             std::cout << buffer << std::endl;
-                            serverCommand(server->sock, &openSockets, &maxfds, buffer);
+
+                            std::string tmp;
+
+                            tmp = buffer;
+
+                            // declaring character array
+                            char char_array[BUF_MAX];
+
+                            // copying the contents of the
+                            // string to char array
+
+                            if (tmp.front() == '\1' && tmp.back() == '\4')
+                            {
+                                tmp = tmp.substr(1, tmp.size() - 2);
+                                strcpy(char_array, tmp.c_str());
+                                serverCommand(server->sock, &openSockets, &maxfds, char_array);
+                            }
                         }
                     }
                 }
