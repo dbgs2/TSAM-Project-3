@@ -13,19 +13,11 @@
 #include <algorithm>
 #include <map>
 #include <vector>
-
 #include <iostream>
 #include <sstream>
 #include <thread>
-#include <map>
-
 #include <net/if.h>
 #include <ifaddrs.h>
-
-#include <ctime>
-#include <ratio>
-#include <chrono>
-
 #include <ctime>
 
 // Allowed length of queue of waiting connections
@@ -71,11 +63,15 @@ public:
 // Lookup tables for per Client or Server information
 std::map<int, Client *> clients;
 std::map<int, Server *> servers;
+std::map<int, Server *> serversToRemove;
 
 // Stores all msg that are outgoing, TODO::Reform to circular buffer, or more efficient
 // storage, that can be reused.
 std::multimap<std::string, std::string> clientMsg;
 
+// Gets current ip
+//
+// Returns string of current wlan0 or lo ip
 std::string getIp()
 {
     struct ifaddrs *myaddrs, *ifa;
@@ -126,6 +122,10 @@ std::string getIp()
             {
                 return inet_ntoa(((struct sockaddr_in *)ifa->ifa_addr)->sin_addr);
             }
+            else if (strcmp(ifa->ifa_name, "lo") == 0)
+            {
+                return inet_ntoa(((struct sockaddr_in *)ifa->ifa_addr)->sin_addr);
+            }
         }
     }
 
@@ -167,17 +167,20 @@ int open_socket(int portno)
 
     // Bind to socket to listen for connections from clients
 
-    if (bind(sock, (struct sockaddr *)&sk_addr, sizeof(sk_addr)) < 0)
+    if ((bind(sock, (const sockaddr *)&sk_addr, sizeof(sk_addr))) < 0)
     {
         perror("Failed to bind to socket:");
-        return (-1);
+        return -1;
     }
     else
     {
-        return (sock);
+        return sock;
     }
 }
 
+// Closes connection to client
+//
+// No return
 void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
 {
     // Remove client from the clients list
@@ -200,6 +203,9 @@ void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
     FD_CLR(clientSocket, openSockets);
 }
 
+// Closes connection to server
+//
+// No return
 void closeServer(int serverSocket, fd_set *openSockets, int *maxfds)
 {
     // Remove client from the clients list
@@ -222,6 +228,9 @@ void closeServer(int serverSocket, fd_set *openSockets, int *maxfds)
     FD_CLR(serverSocket, openSockets);
 }
 
+// Sends msg to another server/client
+//
+// returns true if successful
 bool sendToServer(int socket, std::string msg)
 {
     std::string SOH = "\1";
@@ -249,13 +258,12 @@ bool connectToServer(const char *dst_groupname, const char *dst_ip, const char *
     memset(&hints, 0, sizeof(hints));
 
     hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM; // | SOCK_NONBLOCK;
+    hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
     if (getaddrinfo(dst_ip, dst_port, &hints, &svr) != 0)
     {
         perror("getaddrinfo failed: ");
-        //exit(0);
         return 0;
     }
 
@@ -272,19 +280,14 @@ bool connectToServer(const char *dst_groupname, const char *dst_ip, const char *
     {
         printf("Failed to open socket to server: %s\n", dst_ip);
         perror("Connect failed: ");
-        //exit(0);
         return 0;
     }
 
     FD_SET(serverSocket, openSockets);
     *maxfds = serverSocket;
-    
+
     servers[serverSocket] = new Server(serverSocket);
-    /*
-    servers[serverSocket]->name = dst_groupname;
-    servers[serverSocket]->ip = dst_ip;
-    servers[serverSocket]->port = dst_port;
-    */
+
     std::string msg = "LISTSERVERS," + server_name;
 
     if ((sendToServer(serverSocket, msg)) == 0)
@@ -300,14 +303,13 @@ bool connectToServer(const char *dst_groupname, const char *dst_ip, const char *
 // returns a string, SERVERS,GROUP_ID,SERVER_IP,SERVER_PORT;GROUP_ID,SERVER_IP,SERVER_PORT;
 std::string listServers()
 {
-
     std::string servers_list = "SERVERS," + server_name + "," + server_ip + "," + server_port + ";";
 
     if (!servers.empty())
     {
         for (auto const &s : servers)
         {
-            if(!s.second->name.empty())
+            if (!s.second->name.empty())
                 servers_list += s.second->name + "," + s.second->ip + "," + s.second->port + ";";
         }
         return servers_list;
@@ -316,11 +318,16 @@ std::string listServers()
     return servers_list;
 }
 
+// Sends Keepalive msg to all connected servers, with how many msg are waiting
+//
+// No return
 void sendKeepAlive()
 {
     for (auto const &s : servers)
     {
-        sendToServer(s.second->sock, "KEEPALIVE MSG");
+        int cnt = clientMsg.find(s.second->name)->second.size();
+        std::string msg = "KEEPALIVE," + cnt;
+        sendToServer(s.second->sock, msg.c_str());
     }
 }
 
@@ -336,7 +343,7 @@ std::vector<std::string> getTokens(char *buffer, const char delim)
     // Split command from client into tokens for parsing
     std::stringstream stream(buffer);
 
-    while (std::getline(stream, token, delim)) // ','
+    while (std::getline(stream, token, delim))
     {
         token.erase(std::remove(token.begin(), token.end(), '\n'), token.end());
         tokens.push_back(token);
@@ -345,7 +352,9 @@ std::vector<std::string> getTokens(char *buffer, const char delim)
 }
 
 // Process command from client on the server
-int clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer)
+//
+// No return
+void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer)
 {
     std::vector<std::string> tokens;
     tokens = getTokens(buffer, ',');
@@ -399,11 +408,11 @@ int clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buff
     {
         std::cout << "Unknown command from client:" << buffer << std::endl;
     }
-
-    return 0;
 }
 
 // Process command from server to server
+//
+// No return
 int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buffer)
 {
     std::vector<std::string> tokens;
@@ -415,19 +424,17 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
         std::cout << "Executing command LISTSERVERS" << std::endl;
         std::string servers_list = listServers();
         sendToServer(serverSocket, servers_list);
-        //send(serverSocket, servers_list.c_str(), servers_list.length(), 0);
     }
     // SERVERS
     // e.g. SERVERS,V GROUP 1,130.208.243.61,8888;V GROUP 2,10.2.132.12,888;
     else if (tokens[0].compare("SERVERS") == 0)
     {
-
-        std::string fix = tokens[3];
-        fix.pop_back();
+        std::string port_min1 = tokens[3];
+        port_min1.pop_back();
 
         servers[serverSocket]->name = tokens[1];
         servers[serverSocket]->ip = tokens[2];
-        servers[serverSocket]->port = fix;
+        servers[serverSocket]->port = port_min1;
     }
     // KEEPALIVE,<No. of Messages>
     else if ((tokens[0].compare("KEEPALIVE") == 0) && (tokens.size() == 2))
@@ -447,7 +454,6 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
             }
         }
         sendToServer(serverSocket, msg);
-        //send(serverSocket, msg.c_str(), msg.length() - 1, 0);
     }
     // SEND MSG,<FROM GROUP ID>,<TO GROUP ID>,<Message content>
     else if ((tokens[0].compare("SEND_MSG") == 0) && (tokens.size() == 4))
@@ -459,8 +465,9 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
     {
         for (auto const &s : servers)
         {
-            if (s.second->ip == tokens[1] && s.second->port == tokens[1])
+            if ((tokens[1].compare(s.second->ip) == 0) && (tokens[2].compare(s.second->port) == 0))
             {
+                close(s.second->sock);
                 closeServer(s.second->sock, openSockets, maxfds);
             }
             else
@@ -516,9 +523,8 @@ int main(int argc, char *argv[])
 
     // Setup socket for server to listen to
     listenSockServer = open_socket(atoi(argv[1]));
-    //printf("Listening on port: %d\n", listenSockServer);
 
-    if (listen(listenSockServer, 1) < 0) // BACKLOG
+    if (listen(listenSockServer, 1) < BACKLOG)
     {
         printf("Listen failed on port %s\n", argv[1]);
         exit(0);
@@ -540,9 +546,9 @@ int main(int argc, char *argv[])
     std::cout << "Select client name: ";
     std::cin >> server_name;
 
-    if (listen(listenSockClient, 1) < 0)
+    if (listen(listenSockClient, BACKLOG) < 0)
     {
-        printf("Listen failed on port %s\n", clientPort);
+        //printf("Listen failed on port %s\n", clientPort);
         exit(0);
     }
     else
@@ -554,21 +560,28 @@ int main(int argc, char *argv[])
     finished = false;
 
     struct timeval TV;
-    TV.tv_sec = 0;
+    TV.tv_sec = 60;
+    TV.tv_usec = 0;
     time_t timeInterval = 60;
-    time_t timeOut = 120;
+    time_t timeOut = 300;
     time_t LSKA = time(0);
+
+    std::cout << "LSKA: " << LSKA << std::endl;
 
     while (!finished)
     {
         //auto start = std::chrono::system_clock::now();
 
         // Get modifiable copy of readSockets
+
         readSockets = exceptSockets = openSockets;
         memset(buffer, 0, sizeof(buffer));
 
+        if (TV.tv_sec < 0)
+            TV.tv_sec = 0;
+
         // Look at sockets and see which ones have something to be read()
-        int n = select(maxfds + 1, &readSockets, NULL, &exceptSockets, &TV);
+        int n = select(maxfds + 1, &readSockets, NULL, &exceptSockets, 0); //&TV
 
         if (n < 0)
         {
@@ -623,7 +636,12 @@ int main(int argc, char *argv[])
             {
                 for (auto const &pair : servers)
                 {
+
                     Server *server = pair.second;
+                    if (server == NULL)
+                    {
+                        break;
+                    }
 
                     if (FD_ISSET(server->sock, &readSockets))
                     {
@@ -633,7 +651,7 @@ int main(int argc, char *argv[])
                             printf("Server closed connection: %d", server->sock);
                             close(server->sock);
 
-                            closeClient(server->sock, &openSockets, &maxfds);
+                            closeServer(server->sock, &openSockets, &maxfds);
                         }
                         // We don't check for -1 (nothing received) because select()
                         // only triggers if there is something on the socket for us.
@@ -668,14 +686,21 @@ int main(int argc, char *argv[])
 
                 for (auto const &pair : clients)
                 {
+
                     Client *client = pair.second;
+                    if (client == NULL)
+                    {
+                        break;
+                    }
 
                     if (FD_ISSET(client->sock, &readSockets))
                     {
+                        std::cout << "after isset" << std::endl;
                         // recv() == 0 means client has closed connection
                         if (recv(client->sock, buffer, sizeof(buffer), MSG_DONTWAIT) == 0)
                         {
                             printf("Client closed connection: %d", client->sock);
+
                             close(client->sock);
 
                             closeClient(client->sock, &openSockets, &maxfds);
@@ -688,35 +713,46 @@ int main(int argc, char *argv[])
                             clientCommand(client->sock, &openSockets, &maxfds, buffer);
                         }
                     }
+                    std::cout << "End Loop" << std::endl;
                 }
             }
         }
         /*
         time_t TSLKAS = time(0) - LSKA;
+
+        std::cout << "TSLKAS: " << TSLKAS << std::endl;
+
+        
         if (TSLKAS >= timeInterval)
         {
-            // SEND KA TO ALL ****
             sendKeepAlive();
-            std::cout << "SENDING KEEPALIVE TO ALL NOW" << std::endl;
             LSKA = time(0);
         }
-
+        
         time_t TUNKA = timeInterval - TSLKAS;
+
+        std::cout << "TUNKA: " << TUNKA << std::endl;
         
         for (auto s : servers)
         {
             if (FD_ISSET(listenSockServer, &readSockets))
             {
                 s.second->lastMsg = time(0);
-                std::cout << "A" << std::endl;
+                std::cout << "Got msg from server" << std::endl;
             }
             else
             {
-                std::cout << "B" << std::endl;
+                std::cout << "Did not get msg from server" << std::endl;
                 TSLKAS = time(0) - s.second->lastMsg; // add check if null ?
+                std::cout << "TSLKAS: " << TSLKAS << std::endl;
+                if(TSLKAS >= timeOut)
+                {
+                    serversToRemove.insert(s);
+                    std::cout << "remove this server" << std::endl;
+                }
             }
         }
-        */
-        //TV.tv_sec = TUNKA;
+        
+        TV.tv_sec = TUNKA;*/
     }
 }
