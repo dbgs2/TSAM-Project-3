@@ -22,6 +22,12 @@
 #include <net/if.h>
 #include <ifaddrs.h>
 
+#include <ctime>
+#include <ratio>
+#include <chrono>
+
+#include <ctime>
+
 // Allowed length of queue of waiting connections
 #define BACKLOG 5
 #define BUF_MAX 1025
@@ -55,6 +61,7 @@ public:
     std::string name;
     std::string ip;
     std::string port;
+    time_t lastMsg;
 
     Server(int socket) : sock(socket) {}
 
@@ -271,12 +278,13 @@ bool connectToServer(const char *dst_groupname, const char *dst_ip, const char *
 
     FD_SET(serverSocket, openSockets);
     *maxfds = serverSocket;
-
+    
     servers[serverSocket] = new Server(serverSocket);
+    /*
     servers[serverSocket]->name = dst_groupname;
     servers[serverSocket]->ip = dst_ip;
     servers[serverSocket]->port = dst_port;
-
+    */
     std::string msg = "LISTSERVERS," + server_name;
 
     if ((sendToServer(serverSocket, msg)) == 0)
@@ -294,12 +302,26 @@ std::string listServers()
 {
 
     std::string servers_list = "SERVERS," + server_name + "," + server_ip + "," + server_port + ";";
+
+    if (!servers.empty())
+    {
+        for (auto const &s : servers)
+        {
+            if(!s.second->name.empty())
+                servers_list += s.second->name + "," + s.second->ip + "," + s.second->port + ";";
+        }
+        return servers_list;
+    }
+
+    return servers_list;
+}
+
+void sendKeepAlive()
+{
     for (auto const &s : servers)
     {
-        if (servers.size() > 0)
-            servers_list += s.second->name + "," + s.second->ip + "," + s.second->port + ";";
+        sendToServer(s.second->sock, "KEEPALIVE MSG");
     }
-    return servers_list;
 }
 
 // Split up buffer into tokens, use the delimiter ','
@@ -345,7 +367,6 @@ int clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buff
             }
         }
         sendToServer(clientSocket, msg);
-        //send(clientSocket, msg.c_str(), msg.length() - 1, 0);
     }
     else if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 4))
     {
@@ -354,33 +375,26 @@ int clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buff
         {
             std::string msg = "Connection to server successful";
             sendToServer(clientSocket, msg);
-            //send(clientSocket, msg.c_str(), msg.length(), 0);
         }
         else
         {
             std::string msg = "Connection to server failed";
             sendToServer(clientSocket, msg);
-            //send(clientSocket, msg.c_str(), msg.length(), 0);
         }
     }
     else if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() != 4))
     {
         std::string msg = "Parameters not right, use this format: CONNECT,IP,PORT \n";
+        sendToServer(clientSocket, msg);
     }
     else if ((tokens[0].compare("LISTSERVERS") == 0) && (tokens.size() == 2))
     {
-
         for (auto const &m : servers)
         {
             std::string servers_list = listServers();
             sendToServer(clientSocket, servers_list);
-            //send(m.second->sock, servers_list.c_str(), servers_list.length(), 0);
         }
     }
-    else if (tokens[0].compare("TEST") == 0)
-    {
-    }
-
     else
     {
         std::cout << "Unknown command from client:" << buffer << std::endl;
@@ -407,48 +421,13 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
     // e.g. SERVERS,V GROUP 1,130.208.243.61,8888;V GROUP 2,10.2.132.12,888;
     else if (tokens[0].compare("SERVERS") == 0)
     {
-        //std::string servers_list = listServers();
-        //send(serverSocket, servers_list.c_str(), servers_list.length(), 0);
 
-        //tokens[1]
+        std::string fix = tokens[3];
+        fix.pop_back();
 
-        //std::vector<std::string> tokens;
-        //char *buf = tokens.;
-
-        tokens = getTokens(buffer, ';');
-        tokens.erase(tokens.begin());
-        char *te;
-        std::vector<std::string> tmp;
-        for (auto &t : tokens)
-        {
-            //memset();
-            std::cout << t << std::endl;
-
-            te = &t[0];
-
-            tmp = getTokens(te, ',');
-
-            std::cout << "Executing command CONNECT" << std::endl;
-            if (connectToServer(tmp[0].c_str(), tmp[1].c_str(), tmp[2].c_str(), openSockets, maxfds))
-            {
-                std::string msg = "Connection to server successful";
-                sendToServer(serverSocket, msg);
-                //send(serverSocket, msg.c_str(), msg.length(), 0);
-            }
-            else
-            {
-                std::string msg = "Connection to server failed";
-                sendToServer(serverSocket, msg);
-                //send(serverSocket, msg.c_str(), msg.length(), 0);
-            }
-
-            for (auto &e : tmp)
-            {
-                std::cout << e << std::endl;
-            }
-        }
-
-        std::cout << "got servers thingie" << std::endl;
+        servers[serverSocket]->name = tokens[1];
+        servers[serverSocket]->ip = tokens[2];
+        servers[serverSocket]->port = fix;
     }
     // KEEPALIVE,<No. of Messages>
     else if ((tokens[0].compare("KEEPALIVE") == 0) && (tokens.size() == 2))
@@ -558,6 +537,9 @@ int main(int argc, char *argv[])
     listenSockClient = open_socket(atoi(clientPort.c_str()));
     //printf("Listening on port: %d\n", listenSockClient);
 
+    std::cout << "Select client name: ";
+    std::cin >> server_name;
+
     if (listen(listenSockClient, 1) < 0)
     {
         printf("Listen failed on port %s\n", clientPort);
@@ -571,14 +553,22 @@ int main(int argc, char *argv[])
 
     finished = false;
 
+    struct timeval TV;
+    TV.tv_sec = 0;
+    time_t timeInterval = 60;
+    time_t timeOut = 120;
+    time_t LSKA = time(0);
+
     while (!finished)
     {
+        //auto start = std::chrono::system_clock::now();
+
         // Get modifiable copy of readSockets
         readSockets = exceptSockets = openSockets;
         memset(buffer, 0, sizeof(buffer));
 
         // Look at sockets and see which ones have something to be read()
-        int n = select(maxfds + 1, &readSockets, NULL, &exceptSockets, NULL);
+        int n = select(maxfds + 1, &readSockets, NULL, &exceptSockets, &TV);
 
         if (n < 0)
         {
@@ -601,6 +591,8 @@ int main(int argc, char *argv[])
 
                 // create a new client to store information.
                 servers[sock] = new Server(sock);
+
+                sendToServer(sock, "LISTSERVERS,test");
 
                 // Decrement the number of sockets waiting to be dealt with
                 n--;
@@ -665,6 +657,11 @@ int main(int argc, char *argv[])
                                 strcpy(char_array, tmp.c_str());
                                 serverCommand(server->sock, &openSockets, &maxfds, char_array);
                             }
+                            else
+                            {
+                                std::cout << "failed to get command" << std::endl;
+                                serverCommand(server->sock, &openSockets, &maxfds, buffer); // REMOVE THIS
+                            }
                         }
                     }
                 }
@@ -694,5 +691,32 @@ int main(int argc, char *argv[])
                 }
             }
         }
+        /*
+        time_t TSLKAS = time(0) - LSKA;
+        if (TSLKAS >= timeInterval)
+        {
+            // SEND KA TO ALL ****
+            sendKeepAlive();
+            std::cout << "SENDING KEEPALIVE TO ALL NOW" << std::endl;
+            LSKA = time(0);
+        }
+
+        time_t TUNKA = timeInterval - TSLKAS;
+        
+        for (auto s : servers)
+        {
+            if (FD_ISSET(listenSockServer, &readSockets))
+            {
+                s.second->lastMsg = time(0);
+                std::cout << "A" << std::endl;
+            }
+            else
+            {
+                std::cout << "B" << std::endl;
+                TSLKAS = time(0) - s.second->lastMsg; // add check if null ?
+            }
+        }
+        */
+        //TV.tv_sec = TUNKA;
     }
 }
