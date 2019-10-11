@@ -1,3 +1,5 @@
+
+/*
 // CONNECT,Group_Name,IP_addr,Port_num;
     if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 4)) // was 2
     {
@@ -16,7 +18,7 @@
     }
 
      // Leave with no parameters allowed at all ?
-    /*
+    
     else if (tokens[0].compare("LEAVE") == 0)
     {
         // Close the socket, and leave the socket handling
@@ -25,7 +27,7 @@
 
         closeServer(serverSocket, openSockets, maxfds);
     }
-    */
+    
     // LEAVE,SERVER IP,PORT
     else if ((tokens[0].compare("LEAVE") == 0) && (tokens.size() == 3))
     {
@@ -43,7 +45,7 @@
             }
             else
             {
-                /* code */
+                
                 std::string msg = "No match for ip: " + tokens[1] + " and port: " + tokens[2] + "\n";
                 send(serverSocket, msg.c_str(), msg.length(), 0);
             }
@@ -311,4 +313,33 @@ int main(int argc, char *argv[])
         }
     }
 }
+*/
+
+/*
+The Internet Oracle has pondered your question deeply. Your question was:
+  What's up, Doc? 
+
+And in response, thus spake the Oracle:
+  The price of duck feathers for insulating cold-weather jackets and
+  comfy sleeping bags has increased over the past 50 years. Down is up. 
+Unknown command from server:SEND_MSG,ORACLE,P3_GROUP_42,
+
+The Internet Oracle has pondered your question deeply. Your question was:
+  What's up, Doc? 
+
+And in response, thus spake the Oracle:
+  The price of duck feathers for insulating cold-weather jackets and
+  comfy sleeping bags has increased over the past 50 years. Down is up. 
+
+
+
+
+
+
+
+
+
+  “Imagination is more important than knowledge.  For knowledge is limited, whereas 
+ imagination embraces the entire world, stimulating progress, giving birth to evolution.”
+— Albert Einstein 
 */

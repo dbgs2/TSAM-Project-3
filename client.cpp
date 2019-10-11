@@ -26,6 +26,20 @@
 #include <sstream>
 #include <thread>
 #include <map>
+#include <time.h>
+#include <fstream>
+
+void writeLog(char *msg)
+{
+    time_t rawtime;
+    time(&rawtime);
+    std::ofstream outfile;
+    outfile.open("clientlog.txt", std::ios::app);
+    outfile << ctime(&rawtime);
+    outfile << msg;
+    outfile << '\n';
+    outfile << '\n';
+}
 
 // Threaded function for handling responss from server
 
@@ -47,6 +61,8 @@ void listenServer(int serverSocket)
         else if (nread > 0)
         {
             printf("%s\n", buffer);
+            writeLog(buffer);
+
         }
     }
 }
