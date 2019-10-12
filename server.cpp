@@ -706,16 +706,18 @@ int main(int argc, char *argv[])
 
         time_t now = time(0) + timeOut;
 
-        /*
+        
         for(auto &s : servers)
         {
             
             time_t TSLKA = time(0) - (s.second->lastMsg);
+            std::cout << "TSLKA: " << TSLKA << std::endl;
             
             
             if (TSLKA >= timeOut)
             {
                 //closeServer(s.second->sock, &openSockets, &maxfds);
+                std::cout << "Pushing: " << TSLKA << std::endl;
                 serversToRemove.push_back(s.second->sock);
             }
             
@@ -724,12 +726,13 @@ int main(int argc, char *argv[])
         std::cout << "HERE" << std::endl;
         for (auto &s : serversToRemove)
         {
+            std::cout << "Closing" << std::endl;
             closeServer(s, &openSockets, &maxfds);
         }
         std::cout << "THERE" << std::endl;
-        //serversToRemove.clear();
+        serversToRemove.clear();
         
-        */
+        
 
 
 
@@ -737,7 +740,7 @@ int main(int argc, char *argv[])
         int n = select(maxfds + 1, &readSockets, NULL, &exceptSockets, &TV); //&TV
 
 
-        sendKeepAlive();
+        //sendKeepAlive();
         
 
         
@@ -827,7 +830,7 @@ int main(int argc, char *argv[])
                         // only triggers if there is something on the socket for us.
                         else
                         {
-                            servers[sock]->lastMsg = time(0);
+                            servers[server->sock]->lastMsg = time(0);
                             std::cout << "SERVER is reciving <<< " << buffer << std::endl;
                             std::cout << std::endl;
 
