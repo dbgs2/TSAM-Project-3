@@ -63,13 +63,14 @@ public:
 struct Msg
 {
     std::string sender;
+    //std::string reciver;
     std::string message;
 };
 
 // Lookup tables for per Client or Server information
 std::map<int, Client *> clients;
 std::map<int, Server *> servers;
-std::map<int, Server *> serversToRemove;
+std::vector<int> serversToRemove;
 
 // Stores all msg that are outgoing, TODO::Reform to circular buffer, or more efficient
 // storage, that can be reused.
@@ -252,6 +253,8 @@ bool sendToServer(int socket, std::string msg)
     std::string EOT = "\4";
     std::string msg2 = SOH + msg + EOT;
 
+    std::cout << "SERVER IS SENDING >>> " << msg2 << std::endl;
+
     if ((send(socket, msg2.c_str(), msg2.length(), 0)) < 0)
     {
         perror("Send failed: ");
@@ -302,6 +305,7 @@ bool connectToServer(const char *dst_ip, const char *dst_port, fd_set *openSocke
     *maxfds = serverSocket;
 
     servers[serverSocket] = new Server(serverSocket);
+    servers[serverSocket]->lastMsg = time(0);
 
     std::string msg = "LISTSERVERS," + server_name;
 
@@ -413,6 +417,19 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buf
 
         clientMsg.insert(std::pair<std::string, Msg>(tokens[1], m));
     }
+    else if ((tokens[0].compare("SENDTOSERVER") == 0) && (tokens.size() == 3))
+    {
+        std::cout << "Executing CLIENT command SENDTOSERVER" << std::endl;
+        std::string msg = "SEND_MSG," + server_name + "," + tokens[1] + "," + tokens[2] + ";";
+
+        int sock = getServer(tokens[1]);
+        if(sock < 0)
+        {
+            std::cout << "failed" << std::endl;
+        }else{
+            sendToServer(sock, msg);
+        }
+    }
     else if ((tokens[0].compare("GETMSG") == 0) && (tokens.size() == 2))
     {
         std::cout << "Executing CLIENT command GETMSG" << std::endl;
@@ -455,12 +472,16 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buf
     else if ((tokens[0].compare("STATUSREQ") == 0) && (tokens.size() == 2))
     {
 
-        std::cout << "Executing CLIENT command GETMSG" << std::endl;
+        std::cout << "Executing CLIENT command STATUSREQ" << std::endl;
         std::string msg;
 
         int sock = getServer(tokens[1]);
         sendToServer(sock, msg);
-
+    }
+    else if ((tokens[0].compare("TEST") == 0)) // needs more ?
+    {
+        sendKeepAlive();
+        sendKeepAlive();
     }
     else
     {
@@ -490,12 +511,28 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
     else if (tokens[0].compare("SERVERS") == 0)
     {
         std::cout << "Executing SERVER command SERVERS" << std::endl;
-        std::string port_min1 = tokens[3];
-        port_min1.pop_back();
 
-        servers[serverSocket]->name = tokens[1];
-        servers[serverSocket]->ip = tokens[2];
-        servers[serverSocket]->port = port_min1;
+        std::vector<std::string> serverTokens = getTokens(buffer,';');
+        char char_array[BUF_MAX];
+        memset(&char_array, 0, sizeof(char_array));
+        strcpy(char_array, serverTokens[0].c_str());
+        std::vector<std::string> serverTokensSplit = getTokens(char_array, ',');
+
+        servers[serverSocket]->name = serverTokensSplit[1];
+        servers[serverSocket]->ip = serverTokensSplit[2];
+        servers[serverSocket]->port = serverTokensSplit[3];
+        //servers[serverSocket]->lastMsg = time(0);
+
+        for (size_t i = 1; i < serverTokens.size()-1; i++)
+        {
+            /* code */
+        }
+        
+
+
+
+
+        
     }
     // KEEPALIVE,<No. of Messages>
     else if ((tokens[0].compare("KEEPALIVE") == 0) && (tokens.size() == 2))
@@ -513,8 +550,13 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
         {
             if (m.first == tokens[1])
             {
-                msg += m.second.sender + "," + m.second.message + ",";
+                msg += m.second.sender + "," + m.first + "," + m.second.message; // + ","
             }
+        }
+
+        if (clientMsg.erase(tokens[1]))
+        {
+            std::cout << "msg was erased" << std::endl;
         }
 
         //TODO::REMOVE messages after they are recved
@@ -522,12 +564,20 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
         sendToServer(serverSocket, msg);
     }
     // SEND MSG,<FROM GROUP ID>,<TO GROUP ID>,<Message content>
-    else if ((tokens[0].compare("SEND_MSG") == 0) && (tokens.size() == 4))
+    else if ((tokens[0].compare("SEND_MSG") == 0) && (tokens.size() >= 4))
     {
         std::cout << "Executing SERVER command SEND_MSG" << std::endl;
+        std::string msg;
         Msg m;
         m.sender = tokens[1];
-        m.message = tokens[3];
+        
+        for (size_t i = 3; i < tokens.size(); i++)
+        {
+            msg+= tokens[i];
+        }
+        
+
+        m.message = msg;
 
         clientMsg.insert(std::pair<std::string, Msg>(tokens[2], m));
     }
@@ -569,8 +619,6 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
     else
     {
         std::cout << "Unknown command from server:" << buffer << std::endl;
-        std::string msg = "Unknown command, try again";
-        //sendToServer(serverSocket, msg);
     }
     return 0;
 }
@@ -623,7 +671,7 @@ int main(int argc, char *argv[])
     listenSockClient = open_socket(atoi(clientPort.c_str()));
     //printf("Listening on port: %d\n", listenSockClient);
 
-    std::cout << "Select client name: ";
+    std::cout << "Select server name: ";
     std::cin >> server_name;
 
     if (listen(listenSockClient, BACKLOG) < 0)
@@ -642,24 +690,57 @@ int main(int argc, char *argv[])
     struct timeval TV;
     TV.tv_sec = 60;
     TV.tv_usec = 0;
-    time_t timeInterval = 60;
-    time_t timeOut = 300;
+    time_t timeInterval = 5;
+    time_t timeOut = 120;
     time_t LSKA = time(0);
 
-    std::cout << "LSKA: " << LSKA << std::endl;
 
     while (!finished)
     {
         // Get modifiable copy of readSockets
 
+        std::cout << "-------------" << std::endl;
+
         readSockets = exceptSockets = openSockets;
         memset(buffer, 0, sizeof(buffer));
 
-        if (TV.tv_sec < 0)
-            TV.tv_sec = 0;
+        time_t now = time(0) + timeOut;
+
+        /*
+        for(auto &s : servers)
+        {
+            
+            time_t TSLKA = time(0) - (s.second->lastMsg);
+            
+            
+            if (TSLKA >= timeOut)
+            {
+                //closeServer(s.second->sock, &openSockets, &maxfds);
+                serversToRemove.push_back(s.second->sock);
+            }
+            
+        }
+        
+        std::cout << "HERE" << std::endl;
+        for (auto &s : serversToRemove)
+        {
+            closeServer(s, &openSockets, &maxfds);
+        }
+        std::cout << "THERE" << std::endl;
+        //serversToRemove.clear();
+        
+        */
+
+
 
         // Look at sockets and see which ones have something to be read()
-        int n = select(maxfds + 1, &readSockets, NULL, &exceptSockets, 0); //&TV
+        int n = select(maxfds + 1, &readSockets, NULL, &exceptSockets, &TV); //&TV
+
+
+        sendKeepAlive();
+        
+
+        
 
         if (n < 0)
         {
@@ -681,6 +762,8 @@ int main(int argc, char *argv[])
 
                 // create a new client to store information.
                 servers[sock] = new Server(sock);
+                servers[sock]->lastMsg = time(0);
+                
 
                 /*
                 std::string lisServStr = "LISTSERVERS," + server_name;
@@ -714,6 +797,7 @@ int main(int argc, char *argv[])
             // Now check for commands from clients or servers
             while (n-- > 0)
             {
+
                 for (auto const &pair : servers)
                 {
 
@@ -725,6 +809,12 @@ int main(int argc, char *argv[])
 
                     if (FD_ISSET(server->sock, &readSockets))
                     {
+
+                                   
+
+                        int sizeofcurrentdata = recv(server->sock, buffer, sizeof(buffer), MSG_PEEK); // NEEDED ?
+                        std::cout << "PEEK: " << sizeofcurrentdata << std::endl;
+
                         // recv() == 0 means client has closed connection
                         if (recv(server->sock, buffer, sizeof(buffer), MSG_DONTWAIT) == 0)
                         {
@@ -737,37 +827,50 @@ int main(int argc, char *argv[])
                         // only triggers if there is something on the socket for us.
                         else
                         {
-                            std::cout << buffer << std::endl;
+                            servers[sock]->lastMsg = time(0);
+                            std::cout << "SERVER is reciving <<< " << buffer << std::endl;
+                            std::cout << std::endl;
 
-                            std::string tmp;
-
-                            tmp = buffer;
+                            std::vector<std::string> tokens = getTokens(buffer, '\1');
 
                             // declaring character array
                             char char_array[BUF_MAX];
 
-                            // copying the contents of the
-                            // string to char array
+                            std::string tmp;
 
-                            if (tmp.front() == '\1' && tmp.back() == '\4')
+                            for (auto t : tokens)
                             {
-                                tmp = tmp.substr(1, tmp.size() - 2);
-                                strcpy(char_array, tmp.c_str());
-                                serverCommand(server->sock, &openSockets, &maxfds, char_array);
-                            }
-                            else
-                            {
-                                std::cout << "failed to get command" << std::endl;
-                                serverCommand(server->sock, &openSockets, &maxfds, buffer); // REMOVE THIS
-                            }
-                        }
+                                memset(&char_array, 0, sizeof(char_array));
+                                std::cout << "Token: " << t << std::endl;
+                                if (t.back() == '\4')
+                                {
+                                    std::cout << "Got EOT" << std::endl;
 
-                        if (server->name.empty())
-                        {
-                            std::string lisServStr = "LISTSERVERS," + server_name;
-                            sendToServer(server->sock, lisServStr);
+                                    t.pop_back();
+                                    strcpy(char_array, t.c_str());
+                                    serverCommand(server->sock, &openSockets, &maxfds, char_array);
+                                }
+                                else
+                                {
+                                    sleep(2);
+                                    if (t.back() == '\4')
+                                    {
+                                        t.pop_back();
+                                        strcpy(char_array, t.c_str());
+                                        serverCommand(server->sock, &openSockets, &maxfds, char_array);
+                                    }
+                                }
+                            }
                         }
                     }
+                    /*
+                    if (server->name.empty())
+                    {
+                        std::cout << "WENT HERE" << std::endl;
+                        std::string lisServStr = "LISTSERVERS," + server_name;
+                        sendToServer(server->sock, lisServStr);
+                    }
+                    */
                 }
 
                 for (auto const &pair : clients)
@@ -795,6 +898,7 @@ int main(int argc, char *argv[])
                         else
                         {
                             std::cout << buffer << std::endl;
+                            std::cout << std::endl;
                             clientCommand(client->sock, &openSockets, &maxfds, buffer);
                         }
                     }
@@ -802,6 +906,8 @@ int main(int argc, char *argv[])
             }
         }
 
+
+        TV.tv_sec = 60;
         //sendKeepAlive();
         /*
         time_t TSLKAS = time(0) - LSKA;

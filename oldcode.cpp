@@ -342,4 +342,16 @@ And in response, thus spake the Oracle:
   “Imagination is more important than knowledge.  For knowledge is limited, whereas 
  imagination embraces the entire world, stimulating progress, giving birth to evolution.”
 — Albert Einstein 
+
+
+
+// copying the contents of the
+                            // string to char array
+                            
+                            if (tmp.front() == '\1' && tmp.back() == '\4')
+                            {
+                                tmp = tmp.substr(1, tmp.size() - 2);
+                                strcpy(char_array, tmp.c_str());
+                                serverCommand(server->sock, &openSockets, &maxfds, char_array);
+                            }
 */
