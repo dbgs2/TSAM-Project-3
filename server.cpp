@@ -25,9 +25,11 @@
 
 // Allowed length of queue of waiting connections
 #define BACKLOG 5
+// Maximum buffer for char arrays
 #define BUF_MAX 1025
+// Maximum connections allowed
+#define CONNECTIONS_MAX 5
 
-// TODO MAKE THIS DYNAMIC
 std::string server_name = "P3_GROUP_42";
 std::string server_ip = "0";
 std::string server_port = "0";
@@ -63,6 +65,7 @@ public:
     ~Server() {} // Virtual destructor defined for base class
 };
 
+// Struct to store msg's and the sender
 struct Msg
 {
     std::string sender;
@@ -74,28 +77,25 @@ std::map<int, Client *> clients;
 std::map<int, Server *> servers;
 //int openConnections = 0; // use clients.count() etc
 std::vector<int> serversToRemove;
-std::map<std::string, std::string> potentialServers;
 
-// Stores all msg that are outgoing, TODO::Reform to circular buffer, or more efficient
-// storage, that can be reused.
-//std::multimap<std::string, Msg> clientMsg;
+// Store all msg, <name, <vector of msgs> >
 std::map<std::string, std::vector<Msg>> clientMsg;
-//std::vector<Msg> mesages;
 
+// Functions declerations
 std::string getIp();
+std::string listServers();
+std::string statusRespond();
 int open_socket(int portno);
+int getServer(std::string servName);
+int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buffer);
+void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer);
 void closeClient(int clientSocket, fd_set *openSockets, int *maxfds);
 void closeServer(int serverSocket, fd_set *openSockets, int *maxfds);
+void writeLog(char *msg, std::string inOrOut);
+void sendKeepAlive();
 bool sendToServer(int socket, std::string msg);
 bool connectToServer(const char *dst_ip, const char *dst_port, fd_set *openSockets, int *maxfds);
-std::string listServers();
-void sendKeepAlive();
-std::string statusRespond();
-int getServer(std::string servName);
 std::vector<std::string> getTokens(char *buffer, const char delim);
-void writeLog(char *msg, std::string inOrOut);
-void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer);
-int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buffer);
 
 // Gets current ip
 //
@@ -156,12 +156,6 @@ std::string getIp()
             {
                 return str;
             }
-            /*
-            else if (strcmp(ifa->ifa_name, "eno16780032") == 0)
-            {
-                return inet_ntoa(((struct sockaddr_in *)ifa->ifa_addr)->sin_addr);
-            }
-            */
         }
     }
 
@@ -286,7 +280,7 @@ bool sendToServer(int socket, std::string msg)
     return 1;
 }
 
-// Connects to another server
+// Connects to another server, and sends LISTSERVERS
 //
 // Returns false if unable to connect to server for any reason.
 bool connectToServer(const char *dst_ip, const char *dst_port, fd_set *openSockets, int *maxfds)
@@ -367,31 +361,34 @@ void sendKeepAlive()
 {
     for (auto const &s : servers)
     {
-        std::string cnt = std::to_string(clientMsg[s.second->name].size()); //clientMsg.find(s.second->name)->second
-        std::cout << "KEEPALIVE CNt: " << cnt << std::endl;
+        std::string cnt = std::to_string(clientMsg[s.second->name].size());
         std::string msg = "KEEPALIVE," + cnt;
         sendToServer(s.second->sock, msg.c_str());
     }
 }
 
+// Goes through the client msg, and addst the count for each server that has a msg to a list.
+//
+// returns a string with statusresp like : STATUSRESP,V GROUP 2,I 1,V GROUP4,20,V GROUP71,2
 std::string statusRespond()
 {
-    // STATUSRESP,FROM GROUP,TO GROUP,<server, msgs held>,...
-    // STATUSRESP,V GROUP 2,I_1,  V GROUP4,20,   V GROUP71,2
-
     std::string msg = "STATUSRESP," + server_name;
 
     for (auto const &s : clientMsg)
     {
-        std::string cnt = std::to_string(s.second.size()); //clientMsg.count(s.second
+        std::string cnt = std::to_string(s.second.size());
 
-        msg += "," + s.first + "," + cnt;
+        if (s.second.size() > 0)
+        {
+            msg += "," + s.first + "," + cnt;
+        }
     }
-
-    //sendToServer(socket, msg.c_str());
     return msg;
 }
 
+// Gets server sock by server name
+//
+// returns socket and if none found returns -1 for error handling
 int getServer(std::string servName)
 {
     for (auto const &s : servers)
@@ -404,8 +401,8 @@ int getServer(std::string servName)
     return -1;
 }
 
-// Split up buffer into tokens, use the delimiter ','
-// removes \n if in ned of tokens.
+// Split up buffer into tokens, by a delimiter, and removes it
+// removes \n if in the of tokens.
 //
 // Returns vector with all tokens.
 std::vector<std::string> getTokens(char *buffer, const char delim)
@@ -424,12 +421,16 @@ std::vector<std::string> getTokens(char *buffer, const char delim)
     return tokens;
 }
 
+// Writes a log msg to a file
+//
+// No return
 void writeLog(char *msg, std::string inOrOut)
 {
     time_t rawtime;
     time(&rawtime);
     std::ofstream outfile;
     outfile.open("serverMsgLog.txt", std::ios::app);
+
     outfile << ctime(&rawtime);
     outfile << inOrOut;
     outfile << msg;
@@ -447,28 +448,9 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buf
     randomMessage randMessage;
     randMessage.initializeVector();
 
-    if ((tokens[0].compare("SENDMSG") == 0) && (tokens.size() == 3))
-    {
-
-        std::cout << "Executing CLIENT command SENDMSG" << std::endl;
-        //std::cout << "-->>" << randMessage.getRandomMessage() << std::endl;
-
-        Msg m;
-        m.sender = server_name;
-        m.message = tokens[2];
-
-        clientMsg[tokens[1]].push_back(m);
-
-        //std::string msg = "From: " + tokens[1] + "\n" + tokens[2];
-
-        //clientMsg.insert(std::pair<std::string, Msg>(tokens[1], m));
-
-        //clientMsg[tokens[1]].push_back(m);
-        //writeLog(buffer, "SENDING MESSAGE\n");
-    }
+    // SENDMSG,TO_GROUP
     if ((tokens[0].compare("SENDMSG") == 0) && (tokens.size() == 2))
     {
-
         std::cout << "Executing CLIENT command SENDMSG" << std::endl;
         std::cout << "-->>" << randMessage.getRandomMessage() << std::endl;
 
@@ -477,15 +459,19 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buf
         m.message = randMessage.getRandomMessage();
 
         clientMsg[tokens[1]].push_back(m);
-
-        //std::string msg = "From: " + tokens[1] + "\n" + tokens[2];
-
-        //clientMsg.insert(std::pair<std::string, Msg>(tokens[1], m));
-
-        //clientMsg[tokens[1]].push_back(m);
-        //writeLog(buffer, "SENDING MESSAGE\n");
     }
-    else if ((tokens[0].compare("SENDTOSERVER") == 0) && (tokens.size() == 3))
+    // SENDMSG,TO_GROUP,MSG
+    else if ((tokens[0].compare("SENDMSG") == 0) && (tokens.size() == 3))
+    {
+        std::cout << "Executing CLIENT command SENDMSG" << std::endl;
+        Msg m;
+        m.sender = server_name;
+        m.message = tokens[2];
+
+        clientMsg[tokens[1]].push_back(m);
+    }
+    // SENDTOSERVER,TO_GROUP
+    else if ((tokens[0].compare("SENDTOSERVER") == 0) && (tokens.size() == 2))
     {
         randomMessage randMessage;
         std::cout << "Executing CLIENT command SENDTOSERVER" << std::endl;
@@ -501,10 +487,12 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buf
             sendToServer(sock, msg);
         }
     }
-    else if ((tokens[0].compare("SENDTOORACLE") == 0) && (tokens.size() == 2)) // TODO:: REMOVE THIS
+    // SENDTOSERVER,TO_GROUP,MSG
+    else if ((tokens[0].compare("SENDTOSERVER") == 0) && (tokens.size() == 3))
     {
-        std::cout << "Executing CLIENT command SENDTOORACLE" << std::endl;
-        std::string msg = "SEND_MSG," + server_name + "," + tokens[1] + ";";
+        randomMessage randMessage;
+        std::cout << "Executing CLIENT command SENDTOSERVER" << std::endl;
+        std::string msg = "SEND_MSG," + server_name + "," + tokens[1] + "," + tokens[2] + ";"; //tokens[2]
 
         int sock = getServer(tokens[1]);
         if (sock < 0)
@@ -516,6 +504,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buf
             sendToServer(sock, msg);
         }
     }
+    // GETMSG,FROM_GROUP
     else if ((tokens[0].compare("GETMSG") == 0) && (tokens.size() == 2))
     {
         std::cout << "Executing CLIENT command GETMSG" << std::endl;
@@ -537,17 +526,33 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buf
 
         clientMsg.erase(tokens[1]);
     }
+    // GETMSG,TO_GROUP,FROM_GROUP
+    else if ((tokens[0].compare("GETMSGTOSERVER") == 0) && (tokens.size() == 3))
+    {
+        std::cout << "Executing CLIENT command GETMSG" << std::endl;
+        std::string msg = "GET_MSG," + tokens[1];
+
+        int sock = getServer(tokens[1]);
+        if (sock < 0)
+        {
+            std::cout << "failed" << std::endl;
+        }
+        else
+        {
+            sendToServer(sock, msg);
+        }
+    }
+    // CONNECT,TO_IP,TO_PORT
     else if ((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 3))
     {
         std::cout << "SERVER SIZE: -> " << servers.size() << std::endl;
-        if (servers.size() < 5) //openConnections
+        if (servers.size() < CONNECTIONS_MAX)
         {
             std::cout << "Executing CLIENT command CONNECT" << std::endl;
             if (connectToServer(tokens[1].c_str(), tokens[2].c_str(), openSockets, maxfds))
             {
                 std::string msg = "Connection to server successful";
                 sendToServer(clientSocket, msg);
-                //openConnections++;
             }
             else
             {
@@ -562,6 +567,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buf
             sendToServer(clientSocket, cantConnect);
         }
     }
+    // LISTSERVERS
     else if (tokens[0].compare("LISTSERVERS") == 0)
     {
         std::cout << "Executing CLIENT command LISTSERVERS" << std::endl;
@@ -569,24 +575,31 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buf
         std::string servers_list = listServers();
         sendToServer(clientSocket, servers_list);
     }
-    else if (tokens[0].compare("KEEPALIVE") == 0)
+    // LEAVE,TO_GROUP
+    else if ((tokens[0].compare("LEAVE") == 0) && (tokens.size() == 2))
     {
-        //sendKeepAlive();
+        int sock = getServer(tokens[1]);
+        if (sock < 0)
+        {
+            std::cout << "Failed to get server" << std::endl;
+        }
+        else
+        {
+            std::string msg = "LEAVE," + server_ip + "," + server_port;
+
+            sendToServer(sock, msg);
+        }
     }
+    // STATUSREQ,TO_GROUP
     else if ((tokens[0].compare("STATUSREQ") == 0) && (tokens.size() == 2))
     {
-
         std::cout << "Executing CLIENT command STATUSREQ" << std::endl;
         std::string msg = "STATUSREQ," + server_name;
 
         int sock = getServer(tokens[1]);
         sendToServer(sock, msg);
     }
-    else if ((tokens[0].compare("TEST") == 0)) // needs more ?
-    {
-        sendKeepAlive();
-        sendKeepAlive();
-    }
+    // UNKNOWN COMMAND
     else
     {
         std::cout << "Unknown command from client:" << buffer << std::endl;
@@ -610,7 +623,6 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
         std::string servers_list = listServers();
         sendToServer(serverSocket, servers_list);
     }
-    // SERVERS
     // e.g. SERVERS,V GROUP 1,130.208.243.61,8888;V GROUP 2,10.2.132.12,888;
     else if (tokens[0].compare("SERVERS") == 0)
     {
@@ -636,40 +648,11 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
 
             if ((sendToServer(serverSocket, msg)) == 0)
             {
-                //return 0;
+                std::cout << "Failed to send to server" << std::endl;
             }
             strcpy(toLog, msg.c_str());
             writeLog(toLog, "SENDING MESSAGE\n");
         }
-
-        //servers[serverSocket]->lastMsg = time(0);
-
-        /*
-        for (size_t i = 1; i < serverTokens.size(); i++)
-        {
-            memset(&char_array, 0, sizeof(char_array));
-            strcpy(char_array, serverTokens[i].c_str());
-            std::vector<std::string> serverTokensSplit2 = getTokens(char_array, ',');
-
-            potentialServers.insert(std::pair<std::string, std::string>(serverTokensSplit2[2], serverTokensSplit2[3]));
-
-            
-            if(servers.size() < 5)
-            {
-                if (connectToServer(serverTokensSplit[2].c_str(), serverTokensSplit[3].c_str(), openSockets, maxfds))
-                {
-                    std::string msg = "Connection to server successful";
-                    
-                    //openConnections++;
-                }
-                else
-                {
-                    std::string msg = "Connection to server failed";
-                    
-                }
-            }
-            
-        }*/
     }
     // KEEPALIVE,<No. of Messages>
     else if ((tokens[0].compare("KEEPALIVE") == 0) && (tokens.size() == 2))
@@ -704,17 +687,19 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
 
         memset(&toSend, 0, sizeof(toSend));
         strcpy(toSend, msg.c_str());
-        //clientMsg[tokens[1]].push_back(m);
-        writeLog(toSend, "SENDING MESSAGE\n");
 
-        sendToServer(serverSocket, msg);
-        //clientMsg.at(tokens[1]).erase();
-        if (clientMsg.erase(tokens[1]))
+        if ((sendToServer(serverSocket, msg)) == 0)
         {
-            std::cout << "msg was erased" << std::endl;
+            std::cout << "Failed to send to server" << std::endl;
+        }
+        else
+        {
+            writeLog(toSend, "SENDING MESSAGE\n");
         }
 
-        //TODO::REMOVE messages after they are recved
+        if (clientMsg.erase(tokens[1]))
+        {
+        }
     }
     // SEND MSG,<FROM GROUP ID>,<TO GROUP ID>,<Message content>
     else if ((tokens[0].compare("SEND_MSG") == 0) && (tokens.size() >= 4))
@@ -730,10 +715,8 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
         }
 
         m.message = msg;
-
         writeLog(buffer, "GETING MESSAGE\n");
 
-        //clientMsg.insert(std::pair<std::string, Msg>(tokens[2], m));
         clientMsg[tokens[2]].push_back(m);
     }
     // LEAVE,SERVER IP,PORT
@@ -744,8 +727,7 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
         {
             if ((tokens[1].compare(s.second->ip) == 0) && (tokens[2].compare(s.second->port) == 0))
             {
-                close(s.second->sock);
-                closeServer(s.second->sock, openSockets, maxfds);
+                serversToRemove.push_back(s.first);
             }
             else
             {
@@ -757,7 +739,6 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
     else if ((tokens[0].compare("STATUSREQ") == 0) && (tokens.size() == 2))
     {
         std::cout << "Executing SERVER command STATUSREQ" << std::endl;
-        /* code */
         std::string msg = statusRespond();
         sendToServer(serverSocket, msg);
     }
@@ -767,7 +748,7 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
     {
         /* code */
     }
-
+    // UNKNOWN COMMAND
     else
     {
         std::cout << "Unknown command from server:" << buffer << std::endl;
@@ -801,7 +782,7 @@ int main(int argc, char *argv[])
     std::cout << "Server ip: " << server_ip << std::endl;
     std::cout << "Server port: " << server_port << std::endl;
 
-    // Setup socket for server to listen to
+    // Setup socket for server to listen to other servers
     listenSockServer = open_socket(atoi(argv[1]));
 
     if (listen(listenSockServer, BACKLOG) < 0)
@@ -813,19 +794,21 @@ int main(int argc, char *argv[])
     // Add listen socket to socket set we are monitoring
     {
         FD_SET(listenSockServer, &openSockets);
-        //maxfds = listenSock;
     }
 
-    // Setup socket for client to listne to
+    // Setup socket for server to listen to other clients
     std::cout << "Select client port: ";
     std::string clientPort;
     std::cin >> clientPort;
     listenSockClient = open_socket(atoi(clientPort.c_str()));
-    //printf("Listening on port: %d\n", listenSockClient);
 
+    // FOR DEBUGING MULTIPLE SERVERS
+    /*
     std::cout << "Select server name: ";
     std::cin >> server_name;
+    */
 
+    // Setup socket for server to listen to other servers
     if (listen(listenSockClient, BACKLOG) < 0)
     {
         //printf("Listen failed on port %s\n", clientPort);
@@ -852,44 +835,20 @@ int main(int argc, char *argv[])
         readSockets = exceptSockets = openSockets;
         memset(buffer, 0, sizeof(buffer));
 
-        std::cout << "-------------" << std::endl;
-        /*
-        for (auto &p : potentialServers)
-        {
-            for (auto &s : servers)
-            {
-                if ((s.second->ip != p.first) && (s.second->port != p.second) || (s.second->port != server_port))
-                {
-                    if (connectToServer(p.first.c_str(), p.second.c_str(), &openSockets, &maxfds))
-                    {
-                        std::string msg = "Connection to server successful";
-
-                        openConnections++;
-                    }
-                    else
-                    {
-                        std::string msg = "Connection to server failed";
-                    }
-                }
-            }
-        }*/
-
         for (auto &s : servers)
         {
-
             time_t keepAliveRecv = time(0) - (s.second->lastMsg);
-            std::cout << "keepAliveRecv: " << keepAliveRecv << " for server -> " << s.second->name << std::endl;
 
             if (keepAliveRecv >= timeOut)
             {
-                std::cout << "Time ran out for server, addint to list: " << s.second->name << std::endl;
+                std::cout << "Time ran out for server: " << s.second->name << std::endl;
                 serversToRemove.push_back(s.second->sock);
             }
         }
 
         for (auto &s : serversToRemove)
         {
-            std::cout << "Closing" << std::endl;
+            std::cout << "Closing server: " << servers[s]->name << std::endl;
             closeServer(s, &openSockets, &maxfds);
         }
 
@@ -904,8 +863,6 @@ int main(int argc, char *argv[])
         // Look at sockets and see which ones have something to be read()
         int n = select(maxfds + 1, &readSockets, NULL, &exceptSockets, &TV); //&TV
 
-        //sendKeepAlive();
-
         if (n < 0)
         {
             perror("select failed - closing down\n");
@@ -918,7 +875,7 @@ int main(int argc, char *argv[])
             {
                 sock = accept(listenSockServer, (struct sockaddr *)&adddr_in, &adddr_in_len);
 
-                if (servers.size() < 5)
+                if (servers.size() < CONNECTIONS_MAX)
                 {
                     // Add new client to the list of open sockets
                     FD_SET(sock, &openSockets);
@@ -996,7 +953,7 @@ int main(int argc, char *argv[])
                         else
                         {
                             servers[server->sock]->lastMsg = time(0);
-                            std::cout << "SERVER IS RECIVING <<< " << buffer << std::endl;
+                            std::cout << "SERVER IS RECIVING from server: "  << server->name << " <<< " << buffer << std::endl;
                             std::cout << std::endl;
 
                             std::vector<std::string> tokens = getTokens(buffer, '\1');
@@ -1009,10 +966,10 @@ int main(int argc, char *argv[])
                             for (auto t : tokens)
                             {
                                 memset(&char_array, 0, sizeof(char_array));
-                                std::cout << "Token: " << t << std::endl;
+                                //std::cout << "Token: " << t << std::endl;
                                 if (t.back() == '\4')
                                 {
-                                    std::cout << "Got EOT" << std::endl;
+                                    //std::cout << "Got EOT" << std::endl;
 
                                     t.pop_back();
                                     strcpy(char_array, t.c_str());
@@ -1020,6 +977,7 @@ int main(int argc, char *argv[])
                                 }
                                 else
                                 {
+                                    /*
                                     sleep(2);
                                     if (t.back() == '\4')
                                     {
@@ -1027,18 +985,11 @@ int main(int argc, char *argv[])
                                         strcpy(char_array, t.c_str());
                                         serverCommand(server->sock, &openSockets, &maxfds, char_array);
                                     }
+                                    */
                                 }
                             }
                         }
                     }
-                    /*
-                    if (server->name.empty())
-                    {
-                        std::cout << "WENT HERE" << std::endl;
-                        std::string lisServStr = "LISTSERVERS," + server_name;
-                        sendToServer(server->sock, lisServStr);
-                    }
-                    */
                 }
 
                 for (auto const &pair : clients)

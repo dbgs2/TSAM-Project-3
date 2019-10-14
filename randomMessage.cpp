@@ -4,12 +4,15 @@
 #include <vector>
 #include <cstdlib>
 
+
+
 /*
 using namespace N;
 using namespace std;
 */
 
 std::vector<std::string> messageVector;
+
 
 std::string randomMessage::getRandomMessage()
 {

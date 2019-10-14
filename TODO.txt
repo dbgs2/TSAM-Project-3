@@ -25,6 +25,8 @@ SERVER IS RECIVING <<< SEND_MSG,ORACLE,P3_GROUP_42,
 
 
 
+***EMTY RECV seg fault
+
 
 
 

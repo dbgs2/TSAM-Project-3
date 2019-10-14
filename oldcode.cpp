@@ -360,3 +360,26 @@ P3_GROUP_8,130.208.243.61,4034;
                                 serverCommand(server->sock, &openSockets, &maxfds, char_array);
                             }
 */
+
+
+
+/*
+        for (auto &p : potentialServers)
+        {
+            for (auto &s : servers)
+            {
+                if ((s.second->ip != p.first) && (s.second->port != p.second) || (s.second->port != server_port))
+                {
+                    if (connectToServer(p.first.c_str(), p.second.c_str(), &openSockets, &maxfds))
+                    {
+                        std::string msg = "Connection to server successful";
+
+                        openConnections++;
+                    }
+                    else
+                    {
+                        std::string msg = "Connection to server failed";
+                    }
+                }
+            }
+        }*/

@@ -34,7 +34,6 @@ void writeLog(char *msg)
 }
 
 // Threaded function for handling responss from server
-
 void listenServer(int serverSocket)
 {
     int nread;         // Bytes read from socket

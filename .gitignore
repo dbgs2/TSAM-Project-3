@@ -2,6 +2,7 @@
 !*.cpp
 !*.txt
 !*.md
+!*.h
 !Makefile
 !.gitignore
 ip
