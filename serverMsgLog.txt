@@ -1,24 +1,18 @@
-Mon Oct 14 18:21:32 2019
-SENDING MESSAGE
-SEND_MSG,server1,server2,"You know," said Arthur, "it’s at times like this, when I’m trapped in a Vogon airlock with a man from Betelgeuse, and about to die of asphyxiation in deep space that I really wish I’d listened to what my mother told me when I was young." "Why, what did she tell you?""I don’t know, I didn’t listen."server1,server2,"Space," it says, "is big. Really big. You just won’t believe how vastly, hugely, mindbogglingly big it is. I mean, you may think it’s a long way down the road to the chemist’s, but that’s just peanuts to space."
-
-Mon Oct 14 18:21:34 2019
-SENDING MESSAGE
-SEND_MSG,server1,server3,The ships hung in the sky in much the same way that bricks don’t.
-
-Mon Oct 14 18:21:34 2019
-GETING MESSAGE
-SEND_MSG,server1,server2,"You know," said Arthur, "it’s at times like this, when I’m trapped in a Vogon airlock with a man from Betelgeuse, and about to die of asphyxiation in deep space that I really wish I’d listened to what my mother told me when I was young." "Why, what did she tell you?""I don’t know, I didn’t listen."server1,server2,"Space," it says, "is big. Really big. You just won’t believe how vastly, hugely, mindbogglingly big it is. I mean, you may think it’s a long way down the road to the chemist’s, but that’s just peanuts to space."
-
-Mon Oct 14 18:21:36 2019
-GETING MESSAGE
-SEND_MSG,server1,server3,The ships hung in the sky in much the same way that bricks don’t.
-
-Mon Oct 14 18:33:05 2019
-SENDING MESSAGE
-SEND_MSG,serv1,serv2,There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.serv1,serv2,My doctor says that I have a malformed public-duty gland and a natural deficiency in moral fibre,” Ford muttered to himself, "and that I am therefore excused from saving Universes."serv1,serv2,There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.
-
-Mon Oct 14 18:33:07 2019
-GETING MESSAGE
-SEND_MSG,serv1,serv2,There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.serv1,serv2,My doctor says that I have a malformed public-duty gland and a natural deficiency in moral fibre,” Ford muttered to himself, "and that I am therefore excused from saving Universes."serv1,serv2,There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.
-
+Mon Oct 14 21:09:08 2019
+,SENDING MESSAGE
+,SEND_MSG,server1,serv2,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+Mon Oct 14 21:09:08 2019
+,SENDING MESSAGE
+,SEND_MSG,serv2,server1,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+Mon Oct 14 21:09:10 2019
+,GETING MESSAGE
+,SEND_MSG,serv2,server1,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+Mon Oct 14 21:09:10 2019
+,GETING MESSAGE
+,SEND_MSG,server1,serv2,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+Mon Oct 14 21:10:16 2019
+,SENDING MESSAGE
+,SEND_MSG,server1,serv2,"Funny," he intoned funereally, "how just when you think life can’t possibly get any worse it suddenly does."
+Mon Oct 14 21:10:18 2019
+,GETING MESSAGE
+,SEND_MSG,server1,serv2,"Funny," he intoned funereally, "how just when you think life can’t possibly get any worse it suddenly does."
