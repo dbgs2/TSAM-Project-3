@@ -1,10 +1,3 @@
-//
-// Simple chat client for TSAM-409
-//
-// Command line: ./chat_client 4000
-//
-// Author: Jacky Mallett (jacky@ru.is)
-//
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -21,7 +14,6 @@
 #include <map>
 #include <vector>
 #include <thread>
-
 #include <iostream>
 #include <sstream>
 #include <thread>
@@ -61,7 +53,7 @@ void listenServer(int serverSocket)
         else if (nread > 0)
         {
             printf("%s\n", buffer);
-            writeLog(buffer);
+            //writeLog(buffer);
 
         }
     }

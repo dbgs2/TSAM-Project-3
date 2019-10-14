@@ -1,3 +1,11 @@
+Mon Oct 14 15:58:35 2019
+GETING MESSAGE
+SEND_MSG,ORACLE,P3_GROUP_42,0b37d5345cdb88b60219337856bc0256
+
+Translation
+slithy
+
+
 Remove msg on client GETMSG, () *
 
 Invalid SERVERS, command remove server * does on not getting keepalive handling
@@ -14,3 +22,24 @@ SERVER IS RECIVING <<< SEND_MSG,ORACLE,P3_GROUP_42,
 
 “If you automate a mess, you get an automated mess.”
 — Rod Michael 
+
+
+
+
+
+
+
+
+
+
+1ed4de8986cf6e4a68d5a18c135d36f2 = glue
+0b37d5345cdb88b60219337856bc0256 = slithy
+d782c260658596f870ca9a8be79f4413 = jubjub
+31f23ba6e971170f63781be4d88b3ceb = tumtum
+cb1f435c03a2e455f0e27a1c54cdf8a3 = gimble
+
+
+glue, slithy jubjub tumtum gimble
+
+
+http://www.jabberwocky.com/carroll/jabber/jabberwocky.html the poem
