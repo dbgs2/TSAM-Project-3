@@ -345,6 +345,11 @@ And in response, thus spake the Oracle:
 
 
 
+P3_GROUP_8,130.208.243.61,4034;
+
+
+
+
 // copying the contents of the
                             // string to char array
                             

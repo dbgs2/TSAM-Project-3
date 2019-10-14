@@ -1,0 +1,16 @@
+Remove msg on client GETMSG, () *
+
+Invalid SERVERS, command remove server * does on not getting keepalive handling
+
+CLient log fyrir get og send msg á server *
+
+max 2-5 server connections at a time.
+
+
+
+
+
+SERVER IS RECIVING <<< SEND_MSG,ORACLE,P3_GROUP_42,
+
+“If you automate a mess, you get an automated mess.”
+— Rod Michael 
