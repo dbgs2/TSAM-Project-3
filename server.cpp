@@ -30,6 +30,7 @@
 // Maximum connections allowed
 #define CONNECTIONS_MAX 5
 
+// Defined Constants used to store server infromation
 std::string server_name = "P3_GROUP_42";
 std::string server_ip = "0";
 std::string server_port = "0";
@@ -75,7 +76,8 @@ struct Msg
 // Lookup tables for per Client or Server information
 std::map<int, Client *> clients;
 std::map<int, Server *> servers;
-//int openConnections = 0; // use clients.count() etc
+
+// Vector to store socket of servers to be removed
 std::vector<int> serversToRemove;
 
 // Store all msg, <name, <vector of msgs> >
@@ -241,7 +243,6 @@ void closeServer(int serverSocket, fd_set *openSockets, int *maxfds)
     //sendToServer(serverSocket, "Closing the connection now, over and out!");
     // Remove client from the clients list
     servers.erase(serverSocket);
-    //openConnections--;
 
     // If this client's socket is maxfds then the next lowest
     // one has to be determined. Socket fd's can be reused by the Kernel,
@@ -256,7 +257,6 @@ void closeServer(int serverSocket, fd_set *openSockets, int *maxfds)
     }
 
     // And remove from the list of open sockets.
-
     FD_CLR(serverSocket, openSockets);
 }
 
@@ -370,9 +370,9 @@ void sendKeepAlive()
 // Goes through the client msg, and addst the count for each server that has a msg to a list.
 //
 // returns a string with statusresp like : STATUSRESP,V GROUP 2,I 1,V GROUP4,20,V GROUP71,2
-std::string statusRespond()
+std::string statusRespond(std::string to_server)
 {
-    std::string msg = "STATUSRESP," + server_name;
+    std::string msg = "STATUSRESP," + server_name + "," + to_server;
 
     for (auto const &s : clientMsg)
     {
@@ -739,14 +739,29 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
     else if ((tokens[0].compare("STATUSREQ") == 0) && (tokens.size() == 2))
     {
         std::cout << "Executing SERVER command STATUSREQ" << std::endl;
-        std::string msg = statusRespond();
+        std::string msg = statusRespond(servers[serverSocket]->name);
         sendToServer(serverSocket, msg);
     }
     // STATUSRESP,FROM GROUP,TO GROUP,<server, msgs held>,...
     // eg. STATUSRESP,V GROUP 2,I 1,V GROUP4,20,V GROUP71,2
-    else if ((tokens[0].compare("STATUSRESP") == 0) && (tokens.size() == 4)) // needs more ?
+    else if ((tokens[0].compare("STATUSRESP") == 0) && (tokens.size() >= 3)) // needs more ?
     {
-        /* code */
+        std::cout << "Executing SERVER command STATUSRESP" << std::endl;
+
+        for (size_t i = 3; i < tokens.size(); i = i + 2)
+        {
+            int sock = getServer(tokens[i]);
+            if (sock < 0)
+            {
+                //std::cout << "failed" << std::endl;
+            }
+            else
+            {
+                std::cout << "Found one" << std::endl;
+                std::string msg = "GET_MSG," + tokens[i];
+                sendToServer(serverSocket, msg);
+            }
+        }
     }
     // UNKNOWN COMMAND
     else
@@ -803,10 +818,10 @@ int main(int argc, char *argv[])
     listenSockClient = open_socket(atoi(clientPort.c_str()));
 
     // FOR DEBUGING MULTIPLE SERVERS
-    /*
+    
     std::cout << "Select server name: ";
     std::cin >> server_name;
-    */
+    
 
     // Setup socket for server to listen to other servers
     if (listen(listenSockClient, BACKLOG) < 0)
@@ -886,8 +901,6 @@ int main(int argc, char *argv[])
                     servers[sock] = new Server(sock);
                     servers[sock]->lastMsg = time(0);
 
-                    //openConnections++;
-
                     std::string lisServStr = "LISTSERVERS," + server_name;
                     sendToServer(sock, lisServStr);
                     printf("Server connected to server: %d\n", sock);
@@ -925,6 +938,7 @@ int main(int argc, char *argv[])
             while (n-- > 0)
             {
 
+                // Go through each server connected and check for commands
                 for (auto const &pair : servers)
                 {
 
@@ -934,11 +948,11 @@ int main(int argc, char *argv[])
                         break;
                     }
 
+                    // Check for server commands
                     if (FD_ISSET(server->sock, &readSockets))
                     {
 
                         int sizeofcurrentdata = recv(server->sock, buffer, sizeof(buffer), MSG_PEEK); // NEEDED ?
-                        //std::cout << "PEEK: " << sizeofcurrentdata << std::endl;
 
                         // recv() == 0 means client has closed connection
                         if (recv(server->sock, buffer, sizeof(buffer), MSG_DONTWAIT) == 0)
@@ -953,15 +967,12 @@ int main(int argc, char *argv[])
                         else
                         {
                             servers[server->sock]->lastMsg = time(0);
-                            std::cout << "SERVER IS RECIVING from server: "  << server->name << " <<< " << buffer << std::endl;
+                            std::cout << "SERVER IS RECIVING from server: " << server->name << " <<< " << buffer << std::endl;
                             std::cout << std::endl;
 
                             std::vector<std::string> tokens = getTokens(buffer, '\1');
 
-                            // declaring character array
                             char char_array[BUF_MAX];
-
-                            std::string tmp;
 
                             for (auto t : tokens)
                             {
@@ -969,38 +980,28 @@ int main(int argc, char *argv[])
                                 //std::cout << "Token: " << t << std::endl;
                                 if (t.back() == '\4')
                                 {
-                                    //std::cout << "Got EOT" << std::endl;
-
                                     t.pop_back();
                                     strcpy(char_array, t.c_str());
                                     serverCommand(server->sock, &openSockets, &maxfds, char_array);
                                 }
                                 else
                                 {
-                                    /*
-                                    sleep(2);
-                                    if (t.back() == '\4')
-                                    {
-                                        t.pop_back();
-                                        strcpy(char_array, t.c_str());
-                                        serverCommand(server->sock, &openSockets, &maxfds, char_array);
-                                    }
-                                    */
+                                    std::cout << "Wrong format on command" << std::endl;
                                 }
                             }
                         }
                     }
                 }
 
+                // Go through each client connected and check for commands
                 for (auto const &pair : clients)
                 {
-
                     Client *client = pair.second;
                     if (client == NULL)
                     {
                         break;
                     }
-
+                    // Check for client commands
                     if (FD_ISSET(client->sock, &readSockets))
                     {
                         // recv() == 0 means client has closed connection
@@ -1024,8 +1025,6 @@ int main(int argc, char *argv[])
                 }
             }
         }
-
-        //std::cout << "reseeting TV" << std::endl;
         TV.tv_sec = 60;
     }
 }

@@ -8,3 +8,147 @@ Mon Oct 14 21:09:10 2019
 Mon Oct 14 21:09:10 2019
 ,GETING MESSAGE
 ,SEND_MSG,server1,serv2,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+Mon Oct 14 22:44:22 2019
+SENDING MESSAGE
+SEND_MSG,server1,server2,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:44:22 2019
+SENDING MESSAGE
+SEND_MSG,server2,server1,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:44:22 2019
+GETING MESSAGE
+SEND_MSG,server2,server1,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:44:22 2019
+GETING MESSAGE
+SEND_MSG,server1,server2,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:49:47 2019
+SENDING MESSAGE
+SEND_MSG,server2,server1,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:49:47 2019
+SENDING MESSAGE
+SEND_MSG,server1,server2,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:49:47 2019
+GETING MESSAGE
+SEND_MSG,server1,server2,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:49:47 2019
+GETING MESSAGE
+SEND_MSG,server2,server1,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:49:59 2019
+SENDING MESSAGE
+SEND_MSG,server1,server3,There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.
+
+Mon Oct 14 22:49:59 2019
+SENDING MESSAGE
+SEND_MSG,server3,server1,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:49:59 2019
+GETING MESSAGE
+SEND_MSG,server3,server1,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:49:59 2019
+GETING MESSAGE
+SEND_MSG,server1,server3,There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.
+
+Mon Oct 14 22:53:02 2019
+SENDING MESSAGE
+SEND_MSG,serv1,serv2,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:53:02 2019
+SENDING MESSAGE
+SEND_MSG,serv2,serv1,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:53:02 2019
+GETING MESSAGE
+SEND_MSG,serv2,serv1,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:53:02 2019
+GETING MESSAGE
+SEND_MSG,serv1,serv2,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:53:11 2019
+SENDING MESSAGE
+SEND_MSG,serv1,serv3,There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.
+
+Mon Oct 14 22:53:11 2019
+SENDING MESSAGE
+SEND_MSG,serv3,serv1,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:53:11 2019
+GETING MESSAGE
+SEND_MSG,serv3,serv1,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:53:11 2019
+GETING MESSAGE
+SEND_MSG,serv1,serv3,There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.
+
+Mon Oct 14 22:58:32 2019
+SENDING MESSAGE
+SEND_MSG,serv2,serv1,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:58:32 2019
+SENDING MESSAGE
+SEND_MSG,serv1,serv2,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:58:32 2019
+GETING MESSAGE
+SEND_MSG,serv2,serv1,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:58:32 2019
+GETING MESSAGE
+SEND_MSG,serv1,serv2,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:58:43 2019
+SENDING MESSAGE
+SEND_MSG,serv1,serv3,There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.
+
+Mon Oct 14 22:58:43 2019
+SENDING MESSAGE
+SEND_MSG,serv3,serv1,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:58:44 2019
+GETING MESSAGE
+SEND_MSG,serv3,serv1,For instance, on the planet Earth, man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel, New York, wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely, the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:58:44 2019
+GETING MESSAGE
+SEND_MSG,serv1,serv3,There is a theory which states that if ever anyone discovers exactly what the Universe is for and why it is here, it will instantly disappear and be replaced by something even more bizarre and inexplicable. There is another theory which states that this has already happened.
+
+Mon Oct 14 22:58:51 2019
+SENDING MESSAGE
+SEND_MSG,serv1,serv2,For instance on the planet Earth man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel New York wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:58:51 2019
+GETING MESSAGE
+SEND_MSG,serv1,serv2,For instance on the planet Earth man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel New York wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:58:51 2019
+SENDING MESSAGE
+SEND_MSG,serv2,serv3,test+
+
+Mon Oct 14 22:58:51 2019
+GETING MESSAGE
+SEND_MSG,serv2,serv3,test+
+
+Mon Oct 14 22:59:52 2019
+SENDING MESSAGE
+SEND_MSG,serv1,serv2,For instance on the planet Earth man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel New York wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:59:52 2019
+GETING MESSAGE
+SEND_MSG,serv1,serv2,For instance on the planet Earth man had always assumed that he was more intelligent than dolphins because he had achieved so much — the wheel New York wars and so on — whilst all the dolphins had ever done was muck about in the water having a good time. But conversely the dolphins had always believed that they were far more intelligent than man — for precisely the same reasons.
+
+Mon Oct 14 22:59:52 2019
+SENDING MESSAGE
+SEND_MSG,serv2,serv3,test+
+
+Mon Oct 14 22:59:52 2019
+GETING MESSAGE
+SEND_MSG,serv2,serv3,test+
+
