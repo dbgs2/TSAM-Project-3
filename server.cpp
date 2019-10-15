@@ -526,11 +526,11 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buf
 
         clientMsg.erase(tokens[1]);
     }
-    // GETMSG,TO_GROUP,FROM_GROUP
+    // GETMSGTOSERVER,TO_GROUP,FROM_GROUP
     else if ((tokens[0].compare("GETMSGTOSERVER") == 0) && (tokens.size() == 3))
     {
-        std::cout << "Executing CLIENT command GETMSG" << std::endl;
-        std::string msg = "GET_MSG," + tokens[1];
+        std::cout << "Executing CLIENT command GETMSGTOSERVER" << std::endl;
+        std::string msg = "GET_MSG," + tokens[2];
 
         int sock = getServer(tokens[1]);
         if (sock < 0)
@@ -642,6 +642,8 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
             servers[serverSocket]->ip = serverTokensSplit[2];
             servers[serverSocket]->port = serverTokensSplit[3];
 
+            // THIS IS USED FOR AUTOMATICLY SEND A MSG TO ANOTHER SERVER ON SUCCESSFUL CONNECTION
+            /*
             randomMessage randMessage;
             randMessage.initializeVector();
             std::string msg = "SEND_MSG," + server_name + "," + serverTokensSplit[1] + "," + randMessage.getRandomMessage();
@@ -652,6 +654,7 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
             }
             strcpy(toLog, msg.c_str());
             writeLog(toLog, "SENDING MESSAGE\n");
+            */
         }
     }
     // KEEPALIVE,<No. of Messages>
@@ -697,9 +700,11 @@ int serverCommand(int serverSocket, fd_set *openSockets, int *maxfds, char *buff
             writeLog(toSend, "SENDING MESSAGE\n");
         }
 
+        /*
         if (clientMsg.erase(tokens[1]))
         {
         }
+        */
     }
     // SEND MSG,<FROM GROUP ID>,<TO GROUP ID>,<Message content>
     else if ((tokens[0].compare("SEND_MSG") == 0) && (tokens.size() >= 4))
@@ -821,6 +826,7 @@ int main(int argc, char *argv[])
     
     std::cout << "Select server name: ";
     std::cin >> server_name;
+    
     
 
     // Setup socket for server to listen to other servers
@@ -951,8 +957,10 @@ int main(int argc, char *argv[])
                     // Check for server commands
                     if (FD_ISSET(server->sock, &readSockets))
                     {
-
-                        int sizeofcurrentdata = recv(server->sock, buffer, sizeof(buffer), MSG_PEEK); // NEEDED ?
+                        
+                        int sizeofcurrentdata = recv(server->sock, buffer, sizeof(buffer), MSG_PEEK);
+                        //TODO:: check buffer after MSG_PEEK and make sure it has SOH,EOT transmission, instead
+                        // of doing it here below, its a better way of doing it.
 
                         // recv() == 0 means client has closed connection
                         if (recv(server->sock, buffer, sizeof(buffer), MSG_DONTWAIT) == 0)
@@ -974,14 +982,15 @@ int main(int argc, char *argv[])
 
                             char char_array[BUF_MAX];
 
-                            for (auto t : tokens)
+                            
+                            for (size_t i = 1; i < tokens.size(); i++)//auto t : tokens
                             {
                                 memset(&char_array, 0, sizeof(char_array));
                                 //std::cout << "Token: " << t << std::endl;
-                                if (t.back() == '\4')
+                                if (tokens[i].back() == '\4')
                                 {
-                                    t.pop_back();
-                                    strcpy(char_array, t.c_str());
+                                    tokens[i].pop_back();
+                                    strcpy(char_array, tokens[i].c_str());
                                     serverCommand(server->sock, &openSockets, &maxfds, char_array);
                                 }
                                 else
