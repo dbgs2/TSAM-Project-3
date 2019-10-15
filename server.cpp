@@ -823,9 +823,10 @@ int main(int argc, char *argv[])
     listenSockClient = open_socket(atoi(clientPort.c_str()));
 
     // FOR DEBUGING MULTIPLE SERVERS
-    
+    /*
     std::cout << "Select server name: ";
     std::cin >> server_name;
+    */
     
     
 
