@@ -3,6 +3,7 @@
 !*.txt
 !*.md
 !*.h
+!*.png
 !Makefile
 !.gitignore
 ip
