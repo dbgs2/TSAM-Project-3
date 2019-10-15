@@ -2,7 +2,12 @@
 
 ## Installation
 
-Run the make file to "install" the program
+Run the make file to "install" the program.
+
+Server: Skel
+
+PC OS: GNU/Linux
+
 
 ```bash
 make
